@@ -9,6 +9,8 @@ import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
+import com.spendtracker.core.model.SourceMessage
+import com.spendtracker.core.parser.FinancialMessageParser
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
@@ -68,6 +70,39 @@ class RoomTransactionRepositoryTest {
     }
 
     @Test
+    fun parserReparseUpdatesDetectedFieldsAndPreservesExplicitOverrides() = runTest {
+        withRepository { repository, _ ->
+            val parser = FinancialMessageParser()
+            val original = parser.parse(source("INR 5.00 paid at NORTHSTAR CAFE"))!!
+            repository.upsert(listOf(candidate("1", "reparse", parsed = original)))
+            val stored = repository.observeTransactions().first().single()
+            repository.updateOverrides(stored.id, SpendCategory.TRAVEL, false)
+
+            val reparsed = parser.parse(source("INR 9.99 paid at NORTHSTAR CAFE"))!!
+            repository.upsert(listOf(candidate("1", "reparse", parsed = reparsed)))
+
+            val updated = repository.observeTransactions().first().single()
+            assertEquals(999, updated.transaction.money.amountMinor)
+            assertEquals(2, updated.transaction.parserVersion)
+            assertEquals(SpendCategory.TRAVEL, updated.effectiveCategory)
+            assertFalse(updated.isIncludedInSpend)
+        }
+    }
+
+    @Test
+    fun conflictingReviewRecordRemainsExcludedAfterRoomRoundTrip() = runTest {
+        withRepository { repository, _ ->
+            val parsed = FinancialMessageParser().parse(
+                source("INR 500 debited and INR 400 credited at NORTHSTAR"),
+            )!!
+
+            repository.upsert(listOf(candidate("1", "conflict", parsed = parsed)))
+
+            assertFalse(repository.observeTransactions().first().single().isIncludedInSpend)
+        }
+    }
+
+    @Test
     fun concurrentUpsertsRemainIdempotent() = runTest {
         withRepository { repository, database ->
             List(20) { async { repository.upsert(listOf(candidate("4", "one"))) } }.awaitAll()
@@ -118,11 +153,12 @@ class RoomTransactionRepositoryTest {
         amountMinor: Long = 500,
         currency: CurrencyCode = CurrencyCode.INR,
         confidence: Double = .9,
+        parsed: ParsedTransaction? = null,
     ) = TransactionCandidate(
         sourceType = SourceType.ANDROID_SMS,
         sourceProviderId = providerId,
         sourceFingerprint = fingerprint,
-        transaction = ParsedTransaction(
+        transaction = parsed ?: ParsedTransaction(
             sourceId = providerId,
             sourceReceivedAtEpochMillis = timestamp,
             money = Money(amountMinor, currency),
@@ -135,4 +171,6 @@ class RoomTransactionRepositoryTest {
             parserVersion = 1,
         ),
     )
+
+    private fun source(body: String) = SourceMessage("1", "SYNTHETIC", body, 1_000)
 }

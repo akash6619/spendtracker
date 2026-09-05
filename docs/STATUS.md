@@ -1,8 +1,8 @@
 # Current status
 
 - Last updated: 2026-09-05
-- Current milestone: MVP-03 production import lifecycle complete
-- Next recommended slice: MVP-04 detection and parser hardening
+- Current milestone: MVP-04 detection and parser hardening complete
+- Next recommended slice: MVP-05 categorization and override rules
 - Active work: None
 
 ## Active work
@@ -11,7 +11,7 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 | Slice | Agent/task | Files or area | Started | Notes |
 | --- | --- | --- | --- | --- |
-| None | — | — | — | MVP-03 review fixes complete; MVP-04 is ready |
+| None | — | — | — | MVP-04 review fixes complete; MVP-05 is ready |
 
 ## Implemented now
 
@@ -53,6 +53,18 @@ Agents must claim work here before implementation and clear the row at handoff.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
 - Portable transaction/money/category models.
 - Deterministic parsing for initial INR, USD, EUR, GBP, and JPY patterns.
+- Version-2 parser outcomes explicitly distinguish accepted, needs-review, and
+  rejected messages with privacy-safe reason enums.
+- India-first synthetic coverage includes card/bank debit, UPI purchase, fee,
+  refund/reversal, credit, transfer, and ATM withdrawal wording.
+- Exact amount parsing supports INR aliases, Indian and international grouping,
+  supported foreign currencies, malformed precision, and overflow rejection.
+- Attempt-local aggregate rejection-reason counts provide safe diagnostics; no
+  source content or identifiers are included or added to the Room v2 schema.
+- Conflicting amount/direction records remain visible but default to excluded
+  from spend, and that detected inclusion survives Room round-trips.
+- Amount matching stops before whitespace-separated dates or references instead
+  of merging their digits into the transaction amount.
 - Initial kind, direction, merchant, account hint, category, and confidence rules.
 - Credits/refunds/transfers/ATM withdrawals excluded from spend by policy.
 - Persisted results feeding a dashboard summary and chronological transaction list.
@@ -136,11 +148,33 @@ The subsequent review-fix pass added regression coverage for process death with
 a persisted `RUNNING` state and for an unavailable/null SMS-provider cursor. The
 same full build gate and seven connected tests passed on the API 37 emulator.
 
+On 2026-09-05, the MVP-04 gate completed successfully:
+
+```shell
+./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:jvmTest \
+  :androidApp:testDebugUnitTest :androidApp:lintDebug \
+  :androidApp:assembleDebug :androidApp:assembleRelease
+./gradlew :androidApp:connectedDebugAndroidTest
+```
+
+The shared parser corpus covers completed and nearby-negative synthetic card,
+bank, UPI, fee, refund, credit, transfer, and ATM messages; exact currency minor
+units; explicit rejection/review reasons; conflicting facts; normalization; and
+500 seeded malformed-input mutations. A real Room reparse regression verifies
+that parser-v2 detected fields change without erasing user overrides. Seven
+connected tests passed on `SpendTracker_API_37` (API 37).
+
+The P1 review-fix pass added parser and Room regressions for excluding conflicting
+facts from totals and for stopping amount capture before whitespace-separated
+date/reference digits. Shared/JVM and Android unit tests, lint, iOS compilation,
+debug/release assembly, and all seven connected API 37 tests passed.
+
 ## Known gaps
 
 - Top-level destination survives configuration changes through the ViewModel but
   is not restored after process death.
-- Parser template coverage is intentionally small and has no rejection reason.
+- Parser templates remain a conservative controlled-MVP corpus rather than
+  attempting universal bank coverage; unmatched messages are now explainable.
 - A read-only transaction list exists, but filters, detail, and editing do not.
 - Weekly and monthly aggregations do not exist.
 - There is no `RECEIVE_SMS` live ingestion; foreground overlap reconciliation exists.
@@ -152,7 +186,7 @@ same full build gate and seven connected tests passed on the API 37 emulator.
 
 ## Open questions
 
-These do not block starting MVP-04. Resolve them in the owning slice and record
+These do not block starting MVP-05. Resolve them in the owning slice and record
 a decision:
 
 1. Exact confidence threshold for automatic acceptance versus needs-review.

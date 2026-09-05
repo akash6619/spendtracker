@@ -88,7 +88,8 @@ enum class SpendCategory {
  * Structured financial fields inferred from one recognized source message.
  *
  * This model contains no raw body or sender. It records the parser's detected
- * values, confidence, and version so results can later be reviewed or reparsed.
+ * values, confidence, version, and detected inclusion so results can later be
+ * reviewed or reparsed without Room reads changing their spend semantics.
  */
 data class ParsedTransaction(
     val sourceId: String?,
@@ -101,15 +102,16 @@ data class ParsedTransaction(
     val accountHint: String?,
     val confidence: Double,
     val parserVersion: Int,
+    val detectedIncludedInSpend: Boolean = direction == TransactionDirection.DEBIT &&
+        kind in setOf(TransactionKind.PURCHASE, TransactionKind.FEE),
 ) {
     init {
         require(confidence in 0.0..1.0) { "Confidence must be between 0 and 1" }
     }
 
-    /** Only purchase debits and fees count unless the user overrides the result. */
+    /** Uses the parser's durable detected policy; a later user override takes precedence. */
     val isIncludedInSpend: Boolean
-        get() = direction == TransactionDirection.DEBIT &&
-            kind in setOf(TransactionKind.PURCHASE, TransactionKind.FEE)
+        get() = detectedIncludedInSpend
 }
 
 /**

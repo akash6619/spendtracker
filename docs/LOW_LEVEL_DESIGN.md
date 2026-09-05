@@ -188,9 +188,11 @@ Contains parser-produced fields: money, debit/credit direction, kind, detected
 category, merchant, masked account hint, confidence, timestamp, and parser
 version.
 
-Its computed `isIncludedInSpend` is true only for debit purchases and fees.
+Its detected `isIncludedInSpend` is normally true only for debit purchases and
+fees. Conflicting amount/direction records are also excluded until confirmed.
 Credits, refunds, transfers, and ATM withdrawals remain visible but do not count
-as ordinary spend.
+as ordinary spend. The detected value is carried through Room rather than being
+recomputed after a database read.
 
 ### 5.4 `TransactionCandidate`
 
@@ -236,7 +238,8 @@ bounded transaction batch before requesting the next row.
 
 ### 6.3 Parser
 
-`FinancialMessageParser` is deterministic shared code. For each message it:
+`FinancialMessageParser` is deterministic shared code. Version 2 returns an
+explicit `Accepted`, `NeedsReview`, or `Rejected` outcome. For each message it:
 
 1. normalizes whitespace;
 2. rejects blank, OTP, declined, failed, cancelled, and authorization-only text;
@@ -245,10 +248,16 @@ bounded transaction batch before requesting the next row.
 5. detects debit or credit direction;
 6. extracts a merchant and account hint when possible;
 7. applies ordered keyword category rules;
-8. assigns confidence and parser version.
+8. assigns confidence, review/rejection reasons, and parser version.
 
-Returning `null` means the message is currently unsupported or intentionally
-ignored. Rejection reasons are planned but not implemented.
+Accepted and reviewable outcomes carry a `ParsedTransaction`; rejected outcomes
+carry only a coarse, privacy-safe reason. The compatibility `parse` helper maps
+rejection to `null`, but the importer uses the explicit outcome. Conflicting
+amounts/directions, unknown kinds, and purchase messages without merchants are
+persisted as reviewable; conflicting monetary facts default to excluded from
+totals until confirmation. Aggregate rejection-reason
+counts live only in the current `ImportProgress`; Room v2 persists total rejected
+count and parser version, not a per-reason map.
 
 ### 6.4 Fingerprinter
 
@@ -609,7 +618,7 @@ Implemented now:
 
 Important planned work:
 
-- MVP-04: parser rejection reasons and broader template coverage;
+- MVP-05: versioned categorization and merchant override rules;
 - MVP-05: category and inclusion correction workflows;
 - MVP-06: filters and transaction detail/edit;
 - MVP-07: weekly/monthly and category aggregates;

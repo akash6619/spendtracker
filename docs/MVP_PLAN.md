@@ -20,8 +20,8 @@ slice begins.
 | MVP-01 | App foundation and testable UI shell | Done | MVP-00 | Navigable, previewable app states without using private SMS |
 | MVP-02 | Local database and idempotent repository | Complete | MVP-01 | Parsed transactions survive restart and cannot duplicate |
 | MVP-03 | Production import lifecycle | Complete | MVP-02 | Clear onboarding and durable three-month import/retry status |
-| MVP-04 | Detection and parser hardening | Ready | MVP-02 | Supported messages become explainable, well-tested records |
-| MVP-05 | Categorization and override rules | Planned | MVP-04 | Basic buckets are reliable and corrections persist |
+| MVP-04 | Detection and parser hardening | Complete | MVP-02 | Supported messages become explainable, well-tested records |
+| MVP-05 | Categorization and override rules | Ready | MVP-04 | Basic buckets are reliable and corrections persist |
 | MVP-06 | Transaction list, filters, and detail/edit | Planned | MVP-03, MVP-05 | Users can inspect and correct the ledger |
 | MVP-07 | Weekly and monthly dashboard | Planned | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Planned | MVP-03, MVP-04 | New financial SMS updates the ledger once |
@@ -196,7 +196,7 @@ New-message broadcasts or broad parser-template coverage.
 
 ## MVP-04 — Detection and parser hardening
 
-**Status:** Ready
+**Status:** Complete
 **Depends on:** MVP-02
 
 ### Goal
@@ -218,22 +218,22 @@ without cloud ML or retaining source text.
 
 ### Acceptance criteria
 
-- [ ] OTP, balance-only, marketing, failure, and authorization-only fixtures are
+- [x] OTP, balance-only, marketing, failure, and authorization-only fixtures are
       not accepted as completed spend.
-- [ ] Debit purchase and fee examples are included; transfer, withdrawal, credit,
+- [x] Debit purchase and fee examples are included; transfer, withdrawal, credit,
       and refund examples are excluded by default.
-- [ ] Ambiguous/conflicting messages are reviewable rather than silently counted.
-- [ ] Amounts use exact minor units for all supported currencies.
-- [ ] Parser behavior is independent of Android and deterministic.
-- [ ] Every new template/rule has positive and nearby negative tests.
+- [x] Ambiguous/conflicting messages are reviewable rather than silently counted.
+- [x] Amounts use exact minor units for all supported currencies.
+- [x] Parser behavior is independent of Android and deterministic.
+- [x] Every new template/rule has positive and nearby negative tests.
 
 ### Test gate
 
-- [ ] Table-driven shared parser corpus passes.
-- [ ] Property/fuzz-style tests cover whitespace, casing, punctuation, malformed
+- [x] Table-driven shared parser corpus passes.
+- [x] Property/fuzz-style tests cover whitespace, casing, punctuation, malformed
       amounts, and overflow without crashes.
-- [ ] Reparse tests preserve explicit user overrides through the repository.
-- [ ] No test fixture contains real customer data.
+- [x] Reparse tests preserve explicit user overrides through the repository.
+- [x] No test fixture contains real customer data.
 
 ### Not in this slice
 

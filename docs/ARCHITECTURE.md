@@ -48,7 +48,7 @@ Currently contains:
 
 - `ImportPolicy`
 - `SourceMessage`, `Money`, `ParsedTransaction`, and enums
-- `FinancialMessageParser`
+- `FinancialMessageParser` and explicit accepted/review/rejected outcomes
 - `MessageSource` platform-boundary contract
 - `TransactionRepository` observable read/upsert/edit/delete contract
 - `ImportCoordinator`, durable `ImportState`, and import repository contracts
@@ -58,11 +58,10 @@ Currently contains:
 
 Target additions:
 
-- parser result/rejection reason and normalization pipeline
 - category rules and user/merchant override policy
 - inclusion policy
 - date-range aggregation with injected clock/time zone
-- parser-template and rejection-reason expansion
+- additional controlled parser-template expansion as real coverage evidence grows
 
 ### `androidApp`
 
@@ -131,7 +130,8 @@ History and live messages must share the same pipeline:
 
 1. Platform adapter streams a minimal ephemeral `SourceMessage`.
 2. A source identity/fingerprint is computed before the body is discarded.
-3. Parser either rejects with a reason or produces normalized fields.
+3. Parser returns `Accepted`, `NeedsReview`, or `Rejected`; accepted/reviewable
+   outcomes carry normalized fields and rejected outcomes carry only a safe reason.
 4. Categorizer and inclusion policy assign detected defaults.
 5. Repository performs an idempotent upsert in a transaction.
 6. Existing user overrides are preserved during reparsing.

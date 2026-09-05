@@ -2,8 +2,8 @@ package com.spendtracker.core.importing
 
 import com.spendtracker.core.model.SourceType
 import com.spendtracker.core.model.TransactionCandidate
-import com.spendtracker.core.model.TransactionKind
 import com.spendtracker.core.parser.FinancialMessageParser
+import com.spendtracker.core.parser.ParseOutcome
 import com.spendtracker.core.repository.ImportStateRepository
 import com.spendtracker.core.repository.TransactionRepository
 import kotlinx.coroutines.CancellationException
@@ -48,6 +48,7 @@ class ImportCoordinator(
                 status = ImportRunStatus.RUNNING,
                 lastAttemptEpochMillis = attemptAt,
                 progress = progress,
+                parserVersion = parser.version,
                 failureCode = null,
             ),
         )
@@ -71,13 +72,21 @@ class ImportCoordinator(
                 )
             }
             messageSource.readMessagesSince(cutoff) { message ->
-                val parsed = parser.parse(message)
-                progress = if (parsed == null) {
+                val outcome = parser.classify(message)
+                val parsed = when (outcome) {
+                    is ParseOutcome.Accepted -> outcome.transaction
+                    is ParseOutcome.NeedsReview -> outcome.transaction
+                    is ParseOutcome.Rejected -> null
+                }
+                progress = if (outcome is ParseOutcome.Rejected) {
                     progress.copy(
                         scannedMessages = progress.scannedMessages + 1,
                         rejectedMessages = progress.rejectedMessages + 1,
+                        rejectionReasonCounts = progress.rejectionReasonCounts +
+                            (outcome.reason to (progress.rejectionReasonCounts[outcome.reason] ?: 0) + 1),
                     )
                 } else {
+                    checkNotNull(parsed)
                     pending += TransactionCandidate(
                         sourceType = SourceType.ANDROID_SMS,
                         sourceProviderId = message.sourceId,
@@ -88,7 +97,7 @@ class ImportCoordinator(
                         scannedMessages = progress.scannedMessages + 1,
                         recognizedTransactions = progress.recognizedTransactions + 1,
                         reviewTransactions = progress.reviewTransactions +
-                            if (parsed.confidence < REVIEW_THRESHOLD || parsed.kind == TransactionKind.UNKNOWN) 1 else 0,
+                            if (outcome is ParseOutcome.NeedsReview) 1 else 0,
                     )
                 }
                 onProgress(progress)
@@ -102,6 +111,7 @@ class ImportCoordinator(
                 lastSuccessfulScanEpochMillis = nowEpochMillis(),
                 lastAttemptEpochMillis = attemptAt,
                 progress = progress,
+                parserVersion = parser.version,
                 failureCode = null,
             ).also { importStateRepository.saveImportState(it) }
         } catch (cancellation: CancellationException) {
@@ -130,12 +140,12 @@ class ImportCoordinator(
         status = ImportRunStatus.FAILED,
         lastAttemptEpochMillis = attemptAt,
         progress = progress,
+        parserVersion = parser.version,
         failureCode = code,
     )
 
     private companion object {
         const val DEFAULT_BATCH_SIZE = 100
         const val DEFAULT_OVERLAP_MILLIS = 5 * 60 * 1000L
-        const val REVIEW_THRESHOLD = 0.75
     }
 }

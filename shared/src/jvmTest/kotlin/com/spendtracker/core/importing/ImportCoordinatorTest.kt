@@ -5,6 +5,7 @@ import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.parser.FinancialMessageParser
+import com.spendtracker.core.parser.RejectionReason
 import com.spendtracker.core.repository.ImportStateRepository
 import com.spendtracker.core.repository.TransactionRepository
 import kotlinx.coroutines.CancellationException
@@ -36,9 +37,11 @@ class ImportCoordinatorTest {
         assertEquals(205, result.progress.scannedMessages)
         assertEquals(184, result.progress.recognizedTransactions)
         assertEquals(21, result.progress.rejectedMessages)
+        assertEquals(21, result.progress.rejectionReasonCounts[RejectionReason.NON_FINANCIAL])
         assertEquals(184, result.progress.savedTransactions)
         assertTrue(result.initialImportComplete)
         assertEquals(ImportRunStatus.COMPLETED, result.status)
+        assertEquals(2, result.parserVersion)
         assertTrue(transactions.maxBatchSize <= 25)
         assertEquals(result.progress, progressUpdates.last())
     }

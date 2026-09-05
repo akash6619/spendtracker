@@ -1,6 +1,7 @@
 package com.spendtracker.core.importing
 
 import com.spendtracker.core.model.SourceMessage
+import com.spendtracker.core.parser.RejectionReason
 
 /** Describes the durable lifecycle of the most recent import attempt. */
 enum class ImportRunStatus {
@@ -24,7 +25,8 @@ enum class ImportMode {
 
 /**
  * Safe counters emitted while an import is running.
- * It contains no sender, body, amount, timestamp, or source identifier.
+ * It contains no sender, body, amount, timestamp, or source identifier. Reason
+ * counts are attempt-local aggregate diagnostics and are not stored in Room v2.
  */
 data class ImportProgress(
     val scannedMessages: Int = 0,
@@ -32,6 +34,7 @@ data class ImportProgress(
     val rejectedMessages: Int = 0,
     val reviewTransactions: Int = 0,
     val savedTransactions: Int = 0,
+    val rejectionReasonCounts: Map<RejectionReason, Int> = emptyMap(),
 )
 
 /**

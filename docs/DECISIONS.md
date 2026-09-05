@@ -116,3 +116,19 @@ entry that records the reason, migration impact, and affected tests.
 - Consequence: Overlap reads rely on repository idempotency. Persisted state may
   contain counts and failure codes only; message content and sensitive fields
   remain excluded.
+
+## D-012 — Versioned, explicit parser outcomes
+
+- Date: 2026-09-05
+- Status: Accepted and validated
+- Decision: Parser version 2 returns one of `Accepted`, `NeedsReview`, or
+  `Rejected`. Review and rejection reasons are coarse enums safe for aggregate
+  diagnostics; only accepted and reviewable transactions enter the ledger.
+- Reason: A nullable result cannot distinguish harmless non-financial text from
+  malformed, incomplete, or ambiguous financial messages, making behavior hard
+  to test and explain.
+- Consequence: Ambiguous records remain visible with low confidence and explicit
+  review reasons; conflicting amounts or directions default to excluded from
+  spend until confirmed. Re-import updates detected parser-v2 fields but repository
+  upsert must preserve user overrides. Room v2 stores the parser version and
+  aggregate import totals, while per-reason counts remain attempt-local for now.

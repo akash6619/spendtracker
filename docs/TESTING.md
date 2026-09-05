@@ -35,6 +35,12 @@ Parser tests should be table-driven and contain only synthetic bank/message
 templates. Add cases for whitespace, capitalization, Indian digit grouping,
 missing merchant, overflow, malformed decimals, and repeated currency symbols.
 
+MVP-04 fixes this contract with explicit accepted/review/rejected outcomes, a
+representative India-first corpus, nearby negative cases, exact INR/foreign minor
+units, conflicting-field review cases, and 500 deterministic malformed-input
+mutations. Import tests assert privacy-safe aggregate rejection counts, and a
+Room repository test reparses detected fields while preserving user overrides.
+
 ### Android local unit tests
 
 Cover ViewModel state transitions and Android-independent orchestration with
