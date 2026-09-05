@@ -3,6 +3,7 @@ package com.spendtracker.app.data
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import com.spendtracker.core.model.SourceMessage
+import com.spendtracker.core.importing.SourceFingerprinter
 import java.nio.charset.StandardCharsets
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
@@ -16,8 +17,8 @@ import javax.crypto.SecretKey
  * stored inside Android Keystore. Only the hexadecimal digest leaves this class;
  * deleting the key is part of SpendTracker's full local-data reset.
  */
-class AndroidSourceFingerprinter {
-    fun fingerprint(message: SourceMessage): String {
+class AndroidSourceFingerprinter : SourceFingerprinter {
+    override fun fingerprint(message: SourceMessage): String {
         // NUL separators prevent adjacent fields from producing ambiguous input.
         val normalized = buildString {
             append(message.sender.trim().uppercase())

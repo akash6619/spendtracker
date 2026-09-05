@@ -13,8 +13,18 @@
     <string name="permission_required_body">Android requires your permission before SpendTracker can read the inbox. You can revoke it later in system settings.</string>
     <string name="permission_granted_title">Ready to scan</string>
     <string name="permission_granted_body">SMS access is enabled. Start the local three-month scan when you are ready.</string>
+    <string name="permission_denied_title">SMS access was denied</string>
+    <string name="permission_denied_body">SpendTracker cannot scan messages without access. You can review the privacy explanation and try again.</string>
+    <string name="permission_blocked_title">Enable SMS access in Settings</string>
+    <string name="permission_blocked_body">Android is no longer showing the permission prompt. Open app settings to allow SMS access.</string>
+    <string name="permission_revoked_title">SMS access was revoked</string>
+    <string name="permission_revoked_body">Stored transactions remain available, but scans are paused until access is restored in app settings.</string>
     <string name="action_allow_sms">Allow SMS access</string>
+    <string name="action_try_permission_again">Try permission again</string>
+    <string name="action_open_settings">Open app settings</string>
     <string name="action_scan_messages">Scan last 3 months</string>
+    <string name="action_check_new_messages">Check for new messages</string>
+    <string name="action_cancel_import">Cancel import</string>
     <string name="action_try_again">Try scan again</string>
     <string name="action_explore_demo">Explore with demo data</string>
     <string name="scanning_locally">Scanning locally…</string>
@@ -38,7 +48,7 @@
     <string name="dashboard_future_body">Weekly, monthly, comparison, and category reporting will be added in the dashboard milestone.</string>
 
     <string name="transactions_title">Transactions</string>
-    <string name="transactions_subtitle">Recognized records from the active in-memory session</string>
+    <string name="transactions_subtitle">Recognized records stored privately on this device</string>
     <string name="transactions_empty_title">No transactions to show</string>
     <string name="transactions_empty_body">Scan financial SMS or open the debug demo to preview transaction rows.</string>
     <string name="transaction_excluded">Excluded from spend</string>
@@ -52,14 +62,26 @@
     <string name="sms_access_granted">Granted</string>
     <string name="sms_access_required">Not granted</string>
     <string name="local_only_title">Local-only MVP</string>
-    <string name="local_only_body">No account, backend, analytics, or internet permission is used. This build stores scan results only in memory.</string>
+    <string name="local_only_body">No account, backend, analytics, or internet permission is used. Parsed transactions are stored only on this device; SMS bodies are not saved.</string>
     <plurals name="scan_inspected_count">
         <item quantity="one">Last scan inspected %1$d message.</item>
         <item quantity="other">Last scan inspected %1$d messages.</item>
     </plurals>
+    <plurals name="scan_progress_count">
+        <item quantity="one">%1$d message inspected</item>
+        <item quantity="other">%1$d messages inspected</item>
+    </plurals>
     <plurals name="scan_recognized_count">
         <item quantity="one">It recognized %1$d transaction.</item>
         <item quantity="other">It recognized %1$d transactions.</item>
+    </plurals>
+    <plurals name="scan_saved_count">
+        <item quantity="one">%1$d new transaction was saved.</item>
+        <item quantity="other">%1$d new transactions were saved.</item>
+    </plurals>
+    <plurals name="scan_rejected_count">
+        <item quantity="one">%1$d message was ignored because it was not safely recognized.</item>
+        <item quantity="other">%1$d messages were ignored because they were not safely recognized.</item>
     </plurals>
     <string name="demo_mode_title">Demo data is active</string>
     <string name="demo_mode_body">These are synthetic transactions included only in debug builds.</string>

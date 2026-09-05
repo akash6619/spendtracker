@@ -10,6 +10,6 @@ import com.spendtracker.core.model.SourceMessage
 interface MessageSource {
     suspend fun readMessagesSince(
         cutoffEpochMillis: Long,
-        consume: (SourceMessage) -> Unit,
+        consume: suspend (SourceMessage) -> Unit,
     ): Int
 }

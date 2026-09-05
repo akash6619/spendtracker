@@ -1,8 +1,8 @@
 # Current status
 
 - Last updated: 2026-09-05
-- Current milestone: MVP-02 local database and idempotent repository complete
-- Next recommended slice: MVP-03 production import lifecycle
+- Current milestone: MVP-03 production import lifecycle complete
+- Next recommended slice: MVP-04 detection and parser hardening
 - Active work: None
 
 ## Active work
@@ -11,7 +11,7 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 | Slice | Agent/task | Files or area | Started | Notes |
 | --- | --- | --- | --- | --- |
-| None | — | — | — | Documentation convention update complete |
+| None | — | — | — | MVP-03 review fixes complete; MVP-04 is ready |
 
 ## Implemented now
 
@@ -23,8 +23,8 @@ Agents must claim work here before implementation and clear the row at handoff.
 - Immutable `AppUiState` driven by a constructor-injected `AppViewModel`.
 - Shared `MessageSource` and durable `TransactionRepository` contracts.
 - Room 3 KMP database with bundled SQLite and Android, JVM, and iOS builders.
-- Version-1 schema for transactions, import state, settings, and merchant rules,
-  with an exported JSON schema fixture.
+- Version-2 schema for transactions, import state, settings, and merchant rules,
+  with exported JSON fixtures and a tested version-1-to-version-2 migration.
 - Chronological, detail, period, category-total, review, and count DAO queries.
 - Transactional provider-ID/fingerprint upsert with provider-reuse handling,
   concurrent deduplication, and user-override preservation.
@@ -32,21 +32,33 @@ Agents must claim work here before implementation and clear the row at handoff.
   Android Keystore; raw bodies are discarded after parsing and fingerprinting.
 - Application-scoped database/repository construction and a full local-reset
   operation that clears stored facts before deleting the fingerprint key.
-- Android `SmsMessageScanner` plus a debug/test-only in-memory repository.
+- Shared `ImportCoordinator` streams one message at a time and persists accepted
+  records in bounded, idempotent batches of 100.
+- Durable initial/reconciliation import states with attempt/success timestamps,
+  safe progress counts, coarse failure codes, cancellation, and retry.
+- Exact injected three-calendar-month initial cutoff plus five-minute overlap
+  reconciliation after the last successful scan.
+- Complete permission UI for not requested, denied, permanently denied, granted,
+  and revoked states, with retry or app-settings recovery.
+- Startup converts an abandoned durable `RUNNING` state to retryable
+  `FAILED/INTERRUPTED`, preventing process death from trapping the scan controls.
+- A null SMS-provider cursor is treated as a source failure rather than a
+  successful empty inbox.
 - Debug-only synthetic repository with five safe sample records; release builds
   cannot construct it.
 - Empty, loading, content, and error previews for primary screens.
 - Android strings/plurals resources and a minimal light/dark Material theme.
-- Runtime `READ_SMS` permission request with short privacy explanation.
-- `SmsInboxReader` streaming inbox rows from the previous three months on IO.
+- Runtime `READ_SMS` permission request only after an explicit privacy disclosure
+  and user action.
+- `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
 - Portable transaction/money/category models.
 - Deterministic parsing for initial INR, USD, EUR, GBP, and JPY patterns.
 - Initial kind, direction, merchant, account hint, category, and confidence rules.
 - Credits/refunds/transfers/ATM withdrawals excluded from spend by policy.
 - Persisted results feeding a dashboard summary and chronological transaction list.
 - No raw SMS persistence, login, backend, or internet permission.
-- Twelve shared JVM tests, three ViewModel unit tests, two connected Compose
-  tests, and one connected Android Keystore fingerprint test.
+- Nineteen shared JVM tests, eight Android local tests, four connected Compose
+  tests, two connected importer/provider tests, and one connected Keystore test.
 - Minimal code comments document privacy boundaries, exact-money conversion,
   deduplication collisions, override precedence, and repository switching.
 - Production classes, interfaces, enums, and state holders have explanatory KDoc
@@ -99,25 +111,48 @@ On 2026-09-05, the code-comment clarity pass completed successfully:
   :androidApp:lintDebug :androidApp:assembleDebug
 ```
 
+On 2026-09-05, the MVP-03 gate completed successfully:
+
+```shell
+./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:jvmTest \
+  :androidApp:testDebugUnitTest :androidApp:lintDebug \
+  :androidApp:assembleDebug :androidApp:assembleRelease
+./gradlew :androidApp:connectedDebugAndroidTest
+```
+
+The shared suite covered exact cutoffs, safe progress, cancellation, partial-
+failure retry, overlap reconciliation, 10,000-message bounded batching, durable
+Room state, and the version-1-to-version-2 migration. Connected tests passed on
+`SpendTracker_API_37` (API 37), including a synthetic source through the real
+Android Room database.
+
+Manual emulator checks covered fresh disclosure, first denial and retry, second
+denial and app-settings recovery, grant and successful import, process restart,
+foreground reconciliation, and permission revocation. The imported ledger
+remained at two included INR records totaling ₹1,749.50 plus one excluded foreign
+record after restart; reconciliation added no duplicates.
+
+The subsequent review-fix pass added regression coverage for process death with
+a persisted `RUNNING` state and for an unavailable/null SMS-provider cursor. The
+same full build gate and seven connected tests passed on the API 37 emulator.
+
 ## Known gaps
 
-- The app still opens onboarding after process death even when transactions are
-  stored; durable import/onboarding state is MVP-03.
 - Top-level destination survives configuration changes through the ViewModel but
-  is not restored after process death; durable state begins in MVP-02/MVP-03.
+  is not restored after process death.
 - Parser template coverage is intentionally small and has no rejection reason.
 - A read-only transaction list exists, but filters, detail, and editing do not.
 - Weekly and monthly aggregations do not exist.
-- There is no `RECEIVE_SMS` live ingestion or reconciliation state.
+- There is no `RECEIVE_SMS` live ingestion; foreground overlap reconciliation exists.
 - The Settings shell exists, but delete-all and complete data-lifecycle controls
   do not.
-- Compose coverage currently exercises only the app shell; permission/provider
-  integration tests and physical-device checks are not yet present.
+- Real SMS-provider behavior and physical-device checks remain release work;
+  automated importer integration uses a synthetic source and real Room database.
 - Public release requires Google Play restricted-SMS-permission review material.
 
 ## Open questions
 
-These do not block starting MVP-02. Resolve them in the owning slice and record
+These do not block starting MVP-04. Resolve them in the owning slice and record
 a decision:
 
 1. Exact confidence threshold for automatic acceptance versus needs-review.

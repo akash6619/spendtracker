@@ -50,7 +50,7 @@ class SpendTrackerAppTest {
         composeRule.onNodeWithText("A private snapshot of recognized spending")
             .assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_TRANSACTIONS).performClick()
-        composeRule.onNodeWithText("Recognized records from the active in-memory session")
+        composeRule.onNodeWithText("Recognized records stored privately on this device")
             .assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_SETTINGS).performClick()
         composeRule.onNodeWithText("Local-only MVP").assertIsDisplayed()
@@ -65,6 +65,7 @@ class SpendTrackerAppTest {
             SpendTrackerTheme {
                 SpendTrackerAppContent(
                     state = AppUiState(
+                        stage = AppStage.ONBOARDING,
                         permission = PermissionUiState.GRANTED,
                         error = AppError.SCAN_FAILED,
                         demoAvailable = true,
@@ -81,5 +82,50 @@ class SpendTrackerAppTest {
         composeRule.onNodeWithText("Scan wasn’t completed").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.SCAN_MESSAGES).assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.EXPLORE_DEMO).assertIsDisplayed()
+    }
+
+    @Test
+    fun deniedAndBlockedPermissionExposeCorrectRecoveryAction() {
+        val permission = mutableStateOf(PermissionUiState.DENIED)
+        composeRule.setContent {
+            SpendTrackerTheme {
+                SpendTrackerAppContent(
+                    state = AppUiState(stage = AppStage.ONBOARDING, permission = permission.value),
+                    onRequestSmsPermission = { permission.value = PermissionUiState.PERMANENTLY_DENIED },
+                    onScanMessages = {},
+                    onUseDemoData = {},
+                    onLeaveDemoData = {},
+                    onDestinationSelected = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(UiTestTags.ALLOW_SMS).assertIsDisplayed()
+        composeRule.runOnIdle { permission.value = PermissionUiState.PERMANENTLY_DENIED }
+        composeRule.onNodeWithTag(UiTestTags.OPEN_SETTINGS).assertIsDisplayed()
+    }
+
+    @Test
+    fun runningImportShowsSafeProgressAndCancelAction() {
+        composeRule.setContent {
+            SpendTrackerTheme {
+                SpendTrackerAppContent(
+                    state = AppUiState(
+                        stage = AppStage.ONBOARDING,
+                        permission = PermissionUiState.GRANTED,
+                        isScanning = true,
+                        importProgress = com.spendtracker.core.importing.ImportProgress(scannedMessages = 42),
+                    ),
+                    onRequestSmsPermission = {},
+                    onScanMessages = {},
+                    onUseDemoData = {},
+                    onLeaveDemoData = {},
+                    onDestinationSelected = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("42 messages inspected").assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.CANCEL_IMPORT).assertIsDisplayed()
     }
 }

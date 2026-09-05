@@ -1,54 +1,45 @@
 package com.spendtracker.app.data
 
 import android.content.Context
+import android.database.Cursor
 import android.provider.Telephony
-import com.spendtracker.core.importing.ImportPolicy
 import com.spendtracker.core.importing.MessageSource
 import com.spendtracker.core.model.SourceMessage
-import java.time.ZonedDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
  * Android [MessageSource] backed by the system SMS inbox content provider.
  *
- * It calculates the configured calendar-month cutoff, queries only required
+ * It accepts the coordinator's exact history boundary, queries only required
  * columns on an IO dispatcher, and immediately passes each row to the consumer.
- * It does not retain a list of source messages or persist their bodies.
+ * A provider that cannot return a cursor fails the import rather than being
+ * mistaken for an empty inbox; no message bodies are retained or persisted.
  */
-class SmsInboxReader(private val context: Context) : MessageSource {
-    suspend fun readRecentMessages(
-        policy: ImportPolicy = ImportPolicy(),
-        consume: (SourceMessage) -> Unit,
-    ): Int {
-        val cutoff = ZonedDateTime.now()
-            .minusMonths(policy.historyMonths.toLong())
-            .toInstant()
-            .toEpochMilli()
-
-        return readMessagesSince(cutoff, consume)
-    }
+class SmsInboxReader internal constructor(
+    private val queryInbox: (cutoffEpochMillis: Long) -> Cursor?,
+) : MessageSource {
+    constructor(context: Context) : this(
+        queryInbox = { cutoffEpochMillis ->
+            context.contentResolver.query(
+                Telephony.Sms.Inbox.CONTENT_URI,
+                PROJECTION,
+                "${Telephony.Sms.DATE} >= ?",
+                arrayOf(cutoffEpochMillis.toString()),
+                "${Telephony.Sms.DATE} ASC",
+            )
+        },
+    )
 
     override suspend fun readMessagesSince(
         cutoffEpochMillis: Long,
-        consume: (SourceMessage) -> Unit,
+        consume: suspend (SourceMessage) -> Unit,
     ): Int = withContext(Dispatchers.IO) {
-        // Project only the fields needed for parsing and source identity.
-        val projection = arrayOf(
-            Telephony.Sms._ID,
-            Telephony.Sms.ADDRESS,
-            Telephony.Sms.BODY,
-            Telephony.Sms.DATE,
-        )
         var scanned = 0
-
-        context.contentResolver.query(
-            Telephony.Sms.Inbox.CONTENT_URI,
-            projection,
-            "${Telephony.Sms.DATE} >= ?",
-            arrayOf(cutoffEpochMillis.toString()),
-            "${Telephony.Sms.DATE} ASC",
-        )?.use { cursor ->
+        val cursor = checkNotNull(queryInbox(cutoffEpochMillis)) {
+            "SMS provider did not return a cursor"
+        }
+        cursor.use {
             val idColumn = cursor.getColumnIndexOrThrow(Telephony.Sms._ID)
             val senderColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
             val bodyColumn = cursor.getColumnIndexOrThrow(Telephony.Sms.BODY)
@@ -69,5 +60,15 @@ class SmsInboxReader(private val context: Context) : MessageSource {
         }
 
         scanned
+    }
+
+    private companion object {
+        // Project only the fields needed for parsing and source identity.
+        val PROJECTION = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+        )
     }
 }

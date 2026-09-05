@@ -44,6 +44,8 @@ class RoomTransactionRepository(
         dao.updateOverrides(id, category?.name, includedInSpend, nowEpochMillis())
     }
 
+    override suspend fun count(): Int = dao.count()
+
     override suspend fun clear() = dao.deleteAll()
 }
 

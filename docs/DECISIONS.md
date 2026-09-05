@@ -102,3 +102,17 @@ entry that records the reason, migration impact, and affected tests.
 - Reason: Produces understandable calendar reporting and deterministic boundaries.
 - Consequence: Changing time zone can regroup boundary transactions; the behavior
   must be tested and explained rather than storing a permanent derived week key.
+
+## D-011 — Durable import state with bounded foreground reconciliation
+
+- Date: 2026-09-05
+- Status: Accepted and validated
+- Decision: Persist one coarse import-state row and, after initial completion,
+  reconcile from five minutes before the last successful scan whenever the app
+  resumes with SMS permission.
+- Reason: Onboarding, failure recovery, and restart behavior must survive process
+  death, while a small overlap prevents boundary races without rescanning all
+  three months.
+- Consequence: Overlap reads rely on repository idempotency. Persisted state may
+  contain counts and failure codes only; message content and sensitive fields
+  remain excluded.

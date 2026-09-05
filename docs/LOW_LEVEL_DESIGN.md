@@ -18,11 +18,10 @@ SMS messages after the user grants permission, parses supported messages on the
 device, saves privacy-safe transaction fields and import status in Room/SQLite,
 and renders the ledger through Jetpack Compose.
 
-MVP-03 is actively replacing the original all-at-once `SmsMessageScanner` with a
-durable, batched `ImportCoordinator`. The coordinator and persistence contracts
-described below exist in the current worktree, while final application/ViewModel
-wiring is still in progress. Treat this document as a design draft until MVP-03
-is marked complete.
+MVP-03 replaced the original all-at-once scanner with a durable, batched
+`ImportCoordinator`. The coordinator, permission lifecycle, persistence,
+cancellation/retry UI, and foreground reconciliation described below are wired
+and verified.
 
 ```mermaid
 flowchart LR
@@ -102,14 +101,14 @@ flowchart TD
     App --> Repo[RoomTransactionRepository]
     DAO --> Repo
     App --> FP[AndroidSourceFingerprinter]
-    App -. final MVP-03 wiring .-> Coordinator[ImportCoordinator]
+    App --> Coordinator[ImportCoordinator]
     FP --> Coordinator
 
     OS --> Activity[MainActivity]
     App --> Activity
     Activity --> Factory[AppViewModel.Factory]
     Repo --> Factory
-    Coordinator -. ImportRunner after migration .-> Factory
+    Coordinator --> Factory
     DebugRepo[Debug demo repository or null] --> Factory
     Factory --> VM[AppViewModel]
     Activity --> Compose[SpendTrackerApp]
@@ -125,7 +124,7 @@ production dependencies:
 - lazily creates `SpendTrackerDatabase`;
 - creates `RoomTransactionRepository` from the DAO;
 - creates `AndroidSourceFingerprinter`;
-- is being updated to create `ImportCoordinator` and the import-state repository;
+- creates `ImportCoordinator` and the import-state repository;
 - coordinates full local deletion in database-then-key order.
 
 `by lazy` means an object is created only on first access and then reused. This
@@ -147,8 +146,7 @@ It does not parse messages, run SQL, or calculate dashboard totals.
 ### 4.3 Constructor injection
 
 Objects receive collaborators through constructors. For example,
-`AppViewModel` currently receives the former scanner abstraction and is being
-migrated to `ImportRunner`, while
+`AppViewModel` receives the `ImportRunner` boundary, while
 `RoomTransactionRepository` receives a DAO and a clock function. Tests can
 therefore provide deterministic fakes without starting Android services.
 
@@ -218,10 +216,10 @@ not erase an explicit user correction.
 ### 6.1 Permission boundary
 
 The manifest declares `READ_SMS`; `MainActivity` checks and requests it at
-runtime. The UI/ViewModel must also guard import actions, so an import is
-ignored if permission is absent or another import is already active. MVP-03
-adds persisted knowledge of whether permission was requested, allowing denied
-and revoked states to be distinguished after recreation.
+runtime only after the in-app disclosure and user action. The UI/ViewModel also
+guards import actions, so an import is ignored if permission is absent or another
+import is active. Persisted request history distinguishes first use, retryable
+denial, permanent denial, and permission revoked after a completed import.
 
 ### 6.2 Inbox reader
 
@@ -280,6 +278,12 @@ scanned, recognized, rejected, needs-review, and newly saved. Completion or a
 coarse failure code is persisted. Cancellation is recorded as `INTERRUPTED` in
 a `NonCancellable` block and then rethrown.
 
+Because a coroutine cannot survive process death, startup converts any restored
+`RUNNING` row to `FAILED/INTERRUPTED` before observing it. This makes retry
+available instead of displaying a scan that no longer has a process-local job.
+Likewise, a null cursor from the Android SMS provider throws a source failure;
+only a valid cursor containing zero rows represents an empty inbox.
+
 The transaction repository's idempotent upsert makes retries and reconciliation
 overlap safe. Counts before and after a batch report how many new ledger rows
 were actually saved.
@@ -329,8 +333,7 @@ sequenceDiagram
 
 ### 7.1 Room database
 
-`SpendTrackerDatabase` is being migrated from schema version 1 to version 2 as
-part of MVP-03. It uses Room KMP with bundled SQLite.
+`SpendTrackerDatabase` is at schema version 2 and uses Room KMP with bundled SQLite.
 KSP generates the database implementation. Platform source sets provide only
 the database path; common code supplies the schema, driver, DAO, and repository.
 
@@ -338,7 +341,7 @@ The version-1 schema is exported to
 `shared/schemas/com.spendtracker.core.database.SpendTrackerDatabase/1.json` for
 migration verification. Version 2 adds durable run status, attempt/progress/
 failure fields, and permission-request history through `MIGRATION_1_2`; its
-schema fixture must be exported and verified before MVP-03 completes.
+schema fixture is exported and the migration is covered by a JVM reopen test.
 
 ### 7.2 Tables
 
@@ -444,21 +447,18 @@ old one.
 
 ### 8.3 `AppViewModel`
 
-The ViewModel owns mutable UI state and exposes only read-only `StateFlow`. In
-the last completed slice it:
+The ViewModel owns mutable UI state and exposes only read-only `StateFlow`. It:
 
 - receives permission and navigation intents;
-- launches scans in `viewModelScope`;
-- writes successful candidates to the production repository;
+- launches and cancels imports in `viewModelScope`;
+- observes durable import status and safe progress;
 - observes either production or demo repository, never both at once;
 - derives included INR totals and foreign-transaction counts;
 - maps failures to a coarse `SCAN_FAILED` state without sensitive details.
 
-MVP-03 is changing this boundary from the deleted `MessageScanner` contract to
-`ImportRunner` and adding observation of durable `ImportState`. Until that
-wiring is complete, the worktree contains both the older ViewModel shape and the
-new import contracts; this is a temporary integration seam, not the intended
-final architecture.
+It calls `ImportRunner` for initial or reconciliation work, restores completed
+onboarding state after process death, and initiates an overlap reconciliation
+when a completed app resumes with permission.
 
 The current dashboard total covers all repository rows. Calendar week/month
 aggregation is planned for MVP-07.
@@ -517,9 +517,8 @@ previewable and testable without Android services.
 `CancellationException` is rethrown in the ViewModel. Cancellation is normal
 coroutine control flow and must not be converted into a user-visible scan error.
 
-Current limitations: import state does not yet restore onboarding correctly
-after process death, and live `RECEIVE_SMS` ingestion/reconciliation has not yet
-been implemented.
+Current limitation: live `RECEIVE_SMS` ingestion has not yet been implemented;
+foreground overlap reconciliation is the current recovery mechanism.
 
 ## 10. Build variants and demo data
 
@@ -576,15 +575,16 @@ override preservation, reporting queries, and deletion.
 
 ### 13.2 Android local tests
 
-The completed baseline `AppViewModelTest` supplies a fake scan boundary and the
-in-memory repository to verify state transitions without an emulator. MVP-03
-tests should replace that fake with `ImportRunner` and cover restored durable
-status and incremental progress.
+`AppViewModelTest` supplies fake `ImportRunner` and import-state repositories to
+verify permission states, retry, restored completion, reconciliation, demo mode,
+and progress without an emulator.
 
 ### 13.3 Connected tests
 
-Compose tests verify top-level UI/navigation states. The Keystore test verifies
-stable/different fingerprints and key deletion on an Android runtime.
+Compose tests verify top-level UI/navigation, denial/settings recovery, and
+cancellable progress. A synthetic `MessageSource` runs the coordinator through
+a real Android Room database. The Keystore test verifies stable/different
+fingerprints and key deletion on an Android runtime.
 
 ### 13.4 Test safety
 
@@ -596,24 +596,19 @@ name.
 
 Implemented now:
 
-- permission-gated three-calendar-month SMS scan from the completed baseline;
+- disclosed, permission-gated three-calendar-month SMS import;
 - deterministic parsing and initial categories;
 - Keystore-backed source fingerprinting;
 - durable Room KMP transaction ledger and idempotent upsert;
 - observable dashboard/list UI and debug demo mode;
-- initial unit, Compose, Room, and Keystore tests.
-
-Present in the active MVP-03 worktree but not yet fully wired/verified:
-
-- durable import status and safe progress models;
-- `ImportCoordinator` with bounded batches and reconciliation overlap;
-- `AppStateDao` and `RoomImportStateRepository`;
-- version-1-to-version-2 Room migration;
-- injectable calendar history cutoff.
+- durable status, safe progress, cancellation/retry, and permission recovery UI;
+- bounded `ImportCoordinator` with foreground reconciliation overlap;
+- `AppStateDao`, `RoomImportStateRepository`, and tested version-2 migration;
+- injectable calendar history cutoff;
+- unit, Compose, Room, integration, migration, and Keystore tests.
 
 Important planned work:
 
-- MVP-03: durable import/onboarding lifecycle and retry/permission states;
 - MVP-04: parser rejection reasons and broader template coverage;
 - MVP-05: category and inclusion correction workflows;
 - MVP-06: filters and transaction detail/edit;

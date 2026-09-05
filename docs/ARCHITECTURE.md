@@ -51,7 +51,8 @@ Currently contains:
 - `FinancialMessageParser`
 - `MessageSource` platform-boundary contract
 - `TransactionRepository` observable read/upsert/edit/delete contract
-- Room 3 KMP entities, DAO, database, repository, and exported version-1 schema
+- `ImportCoordinator`, durable `ImportState`, and import repository contracts
+- Room 3 KMP entities, DAOs, database, repositories, version-2 schema, and migration
 - Android, JVM, and iOS database builders using bundled SQLite
 - portable host-side tests
 
@@ -61,7 +62,7 @@ Target additions:
 - category rules and user/merchant override policy
 - inclusion policy
 - date-range aggregation with injected clock/time zone
-- import use cases
+- parser-template and rejection-reason expansion
 
 ### `androidApp`
 
@@ -73,7 +74,9 @@ Currently contains:
 - light/dark Material theme, resources, reusable components, and previews
 - runtime `READ_SMS` permission request
 - `SmsInboxReader` implementing the shared `MessageSource` boundary
-- `SmsMessageScanner` adapting source rows through the shared parser
+- `ImportCoordinator` streaming source rows through parser, fingerprinting, and bounded upserts
+- complete permission states, cancellable progress, retry, and settings recovery
+- foreground reconciliation based on the last successful scan
 - application-scoped Room repository for production data
 - Android Keystore-backed keyed source fingerprints
 - debug-only synthetic repository/data and a release variant with no demo source
@@ -81,7 +84,6 @@ Currently contains:
 
 Target additions:
 
-- production SMS import lifecycle and live-source orchestration
 - receiver plus reconciliation scheduling
 - expanded screen-specific Compose/instrumentation tests
 

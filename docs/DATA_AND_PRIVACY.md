@@ -50,7 +50,7 @@ Android Keystore-backed local storage where practical. Never display the digest.
 
 ## Local schema
 
-Room 3 KMP implements this schema. Its version-1 JSON fixture is exported under
+Room 3 KMP implements this schema. Version-1 and version-2 JSON fixtures are exported under
 `shared/schemas` and is the baseline for future migration tests.
 
 ### `transactions`

@@ -34,7 +34,9 @@ import com.spendtracker.app.ui.theme.SpendTrackerTheme
 fun SettingsScreen(
     state: AppUiState,
     onRequestPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit,
     onScanMessages: () -> Unit,
+    onCancelImport: () -> Unit,
     onLeaveDemoData: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -84,6 +86,20 @@ fun SettingsScreen(
                         summary.recognizedTransactions,
                     ),
                 )
+                Text(
+                    pluralStringResource(
+                        R.plurals.scan_saved_count,
+                        summary.savedTransactions,
+                        summary.savedTransactions,
+                    ),
+                )
+                Text(
+                    pluralStringResource(
+                        R.plurals.scan_rejected_count,
+                        summary.rejectedMessages,
+                        summary.rejectedMessages,
+                    ),
+                )
             }
             if (state.isScanning) {
                 Row(
@@ -91,7 +107,21 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CircularProgressIndicator()
-                    Text(stringResource(R.string.scanning_locally))
+                    Text(
+                        pluralStringResource(
+                            R.plurals.scan_progress_count,
+                            state.importProgress.scannedMessages,
+                            state.importProgress.scannedMessages,
+                        ),
+                    )
+                }
+                OutlinedButton(
+                    onClick = onCancelImport,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(UiTestTags.CANCEL_IMPORT),
+                ) {
+                    Text(stringResource(R.string.action_cancel_import))
                 }
             } else if (state.permission == PermissionUiState.GRANTED) {
                 Button(
@@ -100,9 +130,11 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .testTag(UiTestTags.SCAN_MESSAGES),
                 ) {
-                    Text(stringResource(R.string.action_scan_messages))
+                    Text(stringResource(R.string.action_check_new_messages))
                 }
-            } else {
+            } else if (state.permission == PermissionUiState.NOT_REQUESTED ||
+                state.permission == PermissionUiState.DENIED
+            ) {
                 Button(
                     onClick = onRequestPermission,
                     modifier = Modifier
@@ -110,6 +142,15 @@ fun SettingsScreen(
                         .testTag(UiTestTags.ALLOW_SMS),
                 ) {
                     Text(stringResource(R.string.action_allow_sms))
+                }
+            } else {
+                Button(
+                    onClick = onOpenAppSettings,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(UiTestTags.OPEN_SETTINGS),
+                ) {
+                    Text(stringResource(R.string.action_open_settings))
                 }
             }
         }
@@ -148,7 +189,9 @@ private fun SettingsContentPreview() {
                 demoAvailable = true,
             ),
             onRequestPermission = {},
+            onOpenAppSettings = {},
             onScanMessages = {},
+            onCancelImport = {},
             onLeaveDemoData = {},
         )
     }

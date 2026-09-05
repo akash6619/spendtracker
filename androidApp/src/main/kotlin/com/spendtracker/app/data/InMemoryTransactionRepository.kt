@@ -51,6 +51,8 @@ class InMemoryTransactionRepository(
         }
     }
 
+    override suspend fun count(): Int = transactions.value.size
+
     override suspend fun clear() { transactions.value = emptyList() }
 
     private companion object {

@@ -2,7 +2,10 @@ package com.spendtracker.app
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -28,8 +31,9 @@ class MainActivity : ComponentActivity() {
     private val appViewModel by viewModels<AppViewModel> {
         AppViewModel.Factory(
             primaryRepository = dependencies.repository,
+            importStateRepository = dependencies.importStateRepository,
             demoRepository = BuildVariantDependencies.createDemoRepository(),
-            messageScanner = dependencies.messageScanner,
+            importRunner = dependencies.importCoordinator,
             initialPermissionGranted = hasSmsPermission(),
         )
     }
@@ -40,15 +44,20 @@ class MainActivity : ComponentActivity() {
             val permissionLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.RequestPermission(),
             ) { granted ->
-                appViewModel.onPermissionChanged(granted)
+                appViewModel.onPermissionResult(
+                    granted = granted,
+                    shouldShowRationale = shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS),
+                )
             }
 
             SpendTrackerTheme {
                 SpendTrackerApp(
                     viewModel = appViewModel,
                     onRequestSmsPermission = {
+                        appViewModel.onPermissionRequestStarted()
                         permissionLauncher.launch(Manifest.permission.READ_SMS)
                     },
+                    onOpenAppSettings = ::openAppSettings,
                 )
             }
         }
@@ -56,10 +65,22 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        appViewModel.onPermissionChanged(hasSmsPermission())
+        appViewModel.onAppResumed(
+            granted = hasSmsPermission(),
+            shouldShowRationale = shouldShowRequestPermissionRationale(Manifest.permission.READ_SMS),
+        )
     }
 
     private fun hasSmsPermission(): Boolean =
         ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) ==
             PackageManager.PERMISSION_GRANTED
+
+    private fun openAppSettings() {
+        startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:$packageName"),
+            ),
+        )
+    }
 }

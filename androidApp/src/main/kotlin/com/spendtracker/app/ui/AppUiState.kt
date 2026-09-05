@@ -1,25 +1,31 @@
 package com.spendtracker.app.ui
 
+import com.spendtracker.core.importing.ImportProgress
+import com.spendtracker.core.importing.ImportRunStatus
 import com.spendtracker.core.model.LedgerTransaction
 
 /**
  * Identifies which top-level experience Compose should render.
- * The current app starts in onboarding and moves to the main shell after a scan
- * or when debug demo data is selected.
+ * Initialization waits for durable state, onboarding owns the first import, and
+ * main renders completed local data or an explicitly selected debug demo.
  */
 enum class AppStage {
+    INITIALIZING,
     ONBOARDING,
     MAIN,
 }
 
 /**
- * SMS read-permission state currently needed by the UI.
- * MVP-03 will expand this into first-request, denial, permanent denial, granted,
- * and revoked states for a complete permission lifecycle.
+ * Complete SMS read-permission lifecycle rendered by onboarding and settings.
+ * Request history plus Android rationale state distinguishes retryable denial,
+ * permanent denial, and access revoked after a successful import.
  */
 enum class PermissionUiState {
-    REQUIRED,
+    NOT_REQUESTED,
+    DENIED,
+    PERMANENTLY_DENIED,
     GRANTED,
+    REVOKED,
 }
 
 /**
@@ -48,6 +54,9 @@ enum class AppError {
 data class ScanSummaryUiState(
     val scannedMessages: Int,
     val recognizedTransactions: Int,
+    val rejectedMessages: Int = 0,
+    val reviewTransactions: Int = 0,
+    val savedTransactions: Int = 0,
 )
 
 /**
@@ -78,10 +87,12 @@ data class TransactionsUiState(
  * child-screen state so rendering remains a pure function of one value.
  */
 data class AppUiState(
-    val stage: AppStage = AppStage.ONBOARDING,
-    val permission: PermissionUiState = PermissionUiState.REQUIRED,
+    val stage: AppStage = AppStage.INITIALIZING,
+    val permission: PermissionUiState = PermissionUiState.NOT_REQUESTED,
     val selectedDestination: TopLevelDestination = TopLevelDestination.DASHBOARD,
     val isScanning: Boolean = false,
+    val importStatus: ImportRunStatus = ImportRunStatus.NOT_STARTED,
+    val importProgress: ImportProgress = ImportProgress(),
     val scanSummary: ScanSummaryUiState? = null,
     val error: AppError? = null,
     val demoAvailable: Boolean = false,

@@ -25,6 +25,12 @@ Run on the JVM without an emulator. Cover:
 - aggregation by category and exclusion of non-INR amounts;
 - reparse behavior preserving user overrides.
 
+MVP-03 additionally fixes the import contract with host tests for exact cutoff
+selection, safe progress, cancellation, partial-failure retry, reconciliation
+overlap, version-1 migration, and a lazily generated 10,000-message stream whose
+write batches never exceed 100 records. Regression tests also cover startup with
+an abandoned `RUNNING` state and a null SMS-provider cursor.
+
 Parser tests should be table-driven and contain only synthetic bank/message
 templates. Add cases for whitespace, capitalization, Indian digit grouping,
 missing merchant, overflow, malformed decimals, and repeated currency symbols.
@@ -48,8 +54,10 @@ Cover:
 - receiver-to-worker/repository integration where the platform permits;
 - accessibility semantics for controls and financial values.
 
-Use a test-only fake SMS adapter for reliable UI automation. Keep a smaller
-manual test for the real Android provider boundary.
+Use a test-only fake SMS adapter for reliable UI automation. The current
+connected importer test streams a synthetic source through the production parser
+and a real temporary Room database. Keep a smaller manual test for the real
+Android provider boundary.
 
 ### Manual emulator/device tests
 
@@ -130,4 +138,3 @@ numbers in `STATUS.md` rather than declaring an unmeasured universal time limit.
 A feature slice is complete only when its tests in `MVP_PLAN.md` pass, existing
 suites remain green, relevant manual cases above are checked, and the current
 result is recorded in `STATUS.md`.
-

@@ -49,11 +49,17 @@ data class TransactionEntity(
  */
 data class ImportStateEntity(
     @PrimaryKey val id: Int = 1,
+    val status: String = "NOT_STARTED",
     val initialImportComplete: Boolean = false,
     val lastScanEpochMillis: Long? = null,
+    val lastAttemptEpochMillis: Long? = null,
     val lastScannedCount: Int = 0,
     val lastRecognizedCount: Int = 0,
+    val lastRejectedCount: Int = 0,
+    val lastReviewCount: Int = 0,
+    val lastSavedCount: Int = 0,
     val parserVersion: Int = 1,
+    val failureCode: String? = null,
 )
 
 @Entity(tableName = "merchant_category_rules")
@@ -78,6 +84,7 @@ data class MerchantCategoryRuleEntity(
 data class SettingsEntity(
     @PrimaryKey val id: Int = 1,
     val onboardingSeen: Boolean = false,
+    val smsPermissionRequested: Boolean = false,
 )
 
 /**

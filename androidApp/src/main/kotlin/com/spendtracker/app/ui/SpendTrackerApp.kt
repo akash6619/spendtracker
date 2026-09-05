@@ -1,10 +1,13 @@
 package com.spendtracker.app.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -13,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -34,20 +38,25 @@ object UiTestTags {
     const val NAV_SETTINGS = "nav_settings"
     const val ALLOW_SMS = "allow_sms"
     const val SCAN_MESSAGES = "scan_messages"
+    const val CANCEL_IMPORT = "cancel_import"
     const val EXPLORE_DEMO = "explore_demo"
     const val LEAVE_DEMO = "leave_demo"
+    const val OPEN_SETTINGS = "open_settings"
 }
 
 @Composable
 fun SpendTrackerApp(
     viewModel: AppViewModel,
     onRequestSmsPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     SpendTrackerAppContent(
         state = state,
         onRequestSmsPermission = onRequestSmsPermission,
+        onOpenAppSettings = onOpenAppSettings,
         onScanMessages = viewModel::onScanMessages,
+        onCancelImport = viewModel::onCancelImport,
         onUseDemoData = viewModel::onUseDemoData,
         onLeaveDemoData = viewModel::onLeaveDemoData,
         onDestinationSelected = viewModel::onDestinationSelected,
@@ -58,23 +67,36 @@ fun SpendTrackerApp(
 fun SpendTrackerAppContent(
     state: AppUiState,
     onRequestSmsPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit = {},
     onScanMessages: () -> Unit,
+    onCancelImport: () -> Unit = {},
     onUseDemoData: () -> Unit,
     onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
 ) {
     when (state.stage) {
+        AppStage.INITIALIZING -> Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator()
+        }
+
         AppStage.ONBOARDING -> OnboardingScreen(
             state = state,
             onRequestPermission = onRequestSmsPermission,
             onScanMessages = onScanMessages,
+            onCancelImport = onCancelImport,
             onUseDemoData = onUseDemoData,
+            onOpenAppSettings = onOpenAppSettings,
         )
 
         AppStage.MAIN -> MainAppScaffold(
             state = state,
             onRequestSmsPermission = onRequestSmsPermission,
+            onOpenAppSettings = onOpenAppSettings,
             onScanMessages = onScanMessages,
+            onCancelImport = onCancelImport,
             onLeaveDemoData = onLeaveDemoData,
             onDestinationSelected = onDestinationSelected,
         )
@@ -85,7 +107,9 @@ fun SpendTrackerAppContent(
 private fun MainAppScaffold(
     state: AppUiState,
     onRequestSmsPermission: () -> Unit,
+    onOpenAppSettings: () -> Unit,
     onScanMessages: () -> Unit,
+    onCancelImport: () -> Unit,
     onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
 ) {
@@ -125,7 +149,9 @@ private fun MainAppScaffold(
             TopLevelDestination.SETTINGS -> SettingsScreen(
                 state = state,
                 onRequestPermission = onRequestSmsPermission,
+                onOpenAppSettings = onOpenAppSettings,
                 onScanMessages = onScanMessages,
+                onCancelImport = onCancelImport,
                 onLeaveDemoData = onLeaveDemoData,
                 modifier = Modifier.padding(padding),
             )

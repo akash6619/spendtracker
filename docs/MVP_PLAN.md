@@ -19,8 +19,8 @@ slice begins.
 | MVP-00 | Feasibility baseline | Done | — | App can permission-gate and scan three months into an in-memory summary |
 | MVP-01 | App foundation and testable UI shell | Done | MVP-00 | Navigable, previewable app states without using private SMS |
 | MVP-02 | Local database and idempotent repository | Complete | MVP-01 | Parsed transactions survive restart and cannot duplicate |
-| MVP-03 | Production import lifecycle | Planned | MVP-02 | Clear onboarding and durable three-month import/retry status |
-| MVP-04 | Detection and parser hardening | Planned | MVP-02 | Supported messages become explainable, well-tested records |
+| MVP-03 | Production import lifecycle | Complete | MVP-02 | Clear onboarding and durable three-month import/retry status |
+| MVP-04 | Detection and parser hardening | Ready | MVP-02 | Supported messages become explainable, well-tested records |
 | MVP-05 | Categorization and override rules | Planned | MVP-04 | Basic buckets are reliable and corrections persist |
 | MVP-06 | Transaction list, filters, and detail/edit | Planned | MVP-03, MVP-05 | Users can inspect and correct the ledger |
 | MVP-07 | Weekly and monthly dashboard | Planned | MVP-05, MVP-06 | Users see reproducible period and category totals |
@@ -151,7 +151,7 @@ Final onboarding, parser expansion, or user-facing edit UI.
 
 ## MVP-03 — Production import lifecycle
 
-**Status:** Planned  
+**Status:** Complete
 **Depends on:** MVP-02
 
 ### Goal
@@ -172,21 +172,21 @@ that writes through the repository and explains every state.
 
 ### Acceptance criteria
 
-- [ ] System permission prompt only follows the app's disclosure and user action.
-- [ ] Denial does not crash or trap the user; retry/settings path is clear.
-- [ ] Only messages at or after the exact three-month cutoff are read.
-- [ ] A completed import populates the repository and app restart skips redundant
+- [x] System permission prompt only follows the app's disclosure and user action.
+- [x] Denial does not crash or trap the user; retry/settings path is clear.
+- [x] Only messages at or after the exact three-month cutoff are read.
+- [x] A completed import populates the repository and app restart skips redundant
       first-import onboarding.
-- [ ] Interrupted/failed import can retry without duplicates.
-- [ ] Revocation stops reads and surfaces a recoverable status.
-- [ ] Body/sender/amount do not appear in logs or error text.
+- [x] Interrupted/failed import can retry without duplicates.
+- [x] Revocation stops reads and surfaces a recoverable status.
+- [x] Body/sender/amount do not appear in logs or error text.
 
 ### Test gate
 
-- [ ] Unit tests for cutoff, progress, cancellation, retry, and error mapping.
-- [ ] Instrumentation test with a fake SMS source and real test database.
-- [ ] Manual fresh-install deny/grant/revoke/retry checks on emulator.
-- [ ] Generated high-volume corpus shows streaming/bounded memory behavior.
+- [x] Unit tests for cutoff, progress, cancellation, retry, and error mapping.
+- [x] Instrumentation test with a fake SMS source and real test database.
+- [x] Manual fresh-install deny/grant/revoke/retry checks on emulator.
+- [x] Generated high-volume corpus shows streaming/bounded memory behavior.
 
 ### Not in this slice
 
@@ -196,7 +196,7 @@ New-message broadcasts or broad parser-template coverage.
 
 ## MVP-04 — Detection and parser hardening
 
-**Status:** Planned  
+**Status:** Ready
 **Depends on:** MVP-02
 
 ### Goal

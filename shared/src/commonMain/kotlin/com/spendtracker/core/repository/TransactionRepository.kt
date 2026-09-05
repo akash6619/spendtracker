@@ -25,5 +25,7 @@ interface TransactionRepository {
         includedInSpend: Boolean?,
     )
 
+    suspend fun count(): Int
+
     suspend fun clear()
 }
