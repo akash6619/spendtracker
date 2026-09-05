@@ -1,0 +1,146 @@
+package com.spendtracker.app.ui.transactions
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.spendtracker.app.R
+import com.spendtracker.app.ui.PreviewData
+import com.spendtracker.app.ui.TransactionsUiState
+import com.spendtracker.app.ui.components.DemoBanner
+import com.spendtracker.app.ui.components.InfoCard
+import com.spendtracker.app.ui.components.ScreenHeader
+import com.spendtracker.app.ui.format.formatDate
+import com.spendtracker.app.ui.format.formatMoney
+import com.spendtracker.app.ui.format.labelResource
+import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.core.model.CurrencyCode
+import com.spendtracker.core.model.LedgerTransaction
+
+@Composable
+fun TransactionsScreen(
+    state: TransactionsUiState,
+    modifier: Modifier = Modifier,
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            ScreenHeader(
+                title = stringResource(R.string.transactions_title),
+                subtitle = stringResource(R.string.transactions_subtitle),
+            )
+        }
+        if (state.isDemo) item { DemoBanner() }
+
+        if (state.transactions.isEmpty()) {
+            item {
+                InfoCard(
+                    title = stringResource(R.string.transactions_empty_title),
+                    body = stringResource(R.string.transactions_empty_body),
+                )
+            }
+        } else {
+            items(
+                items = state.transactions,
+                key = { transaction ->
+                    transaction.id
+                },
+            ) { transaction ->
+                TransactionRow(transaction)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransactionRow(transaction: LedgerTransaction) {
+    val parsed = transaction.transaction
+    val amount = formatMoney(parsed.money)
+    val category = stringResource(transaction.effectiveCategory.labelResource())
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$amount, $category"
+            },
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    parsed.merchant
+                        ?: stringResource(R.string.transaction_unknown_merchant),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    stringResource(
+                        R.string.transaction_meta,
+                        category,
+                        formatDate(parsed.sourceReceivedAtEpochMillis),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                when {
+                    parsed.money.currency != CurrencyCode.INR -> Text(
+                        stringResource(R.string.transaction_foreign),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+
+                    !transaction.isIncludedInSpend -> Text(
+                        stringResource(R.string.transaction_excluded),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Text(amount, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TransactionsContentPreview() {
+    SpendTrackerTheme {
+        TransactionsScreen(
+            TransactionsUiState(
+                transactions = listOf(PreviewData.transaction),
+                isDemo = true,
+            ),
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TransactionsEmptyPreview() {
+    SpendTrackerTheme {
+        TransactionsScreen(TransactionsUiState())
+    }
+}
