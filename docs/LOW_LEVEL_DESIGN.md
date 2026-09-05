@@ -301,7 +301,7 @@ sequenceDiagram
     C->>V: onScanMessages()
     V->>V: isScanning = true
     V-->>C: emit AppUiState
-    C->>C: recompose; show progress
+    C->>C: recompose and show progress
     V->>S: run(INITIAL or RECONCILIATION)
     S->>DB: persist RUNNING import state
     S->>R: read recent rows
