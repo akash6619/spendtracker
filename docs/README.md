@@ -17,6 +17,7 @@ and handoff work.
 | --- | --- |
 | [`PRODUCT.md`](PRODUCT.md) | Goals, user journeys, scope, and product requirements |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Framework choice, module boundaries, and data flow |
+| [`LOW_LEVEL_DESIGN.md`](LOW_LEVEL_DESIGN.md) | Beginner-friendly runtime, class, state, persistence, and sequence design |
 | [`DATA_AND_PRIVACY.md`](DATA_AND_PRIVACY.md) | Storage model, raw-SMS policy, retention, and currency |
 | [`TESTING.md`](TESTING.md) | Test pyramid, fixtures, commands, and release matrix |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Local setup, emulator workflow, and coding conventions |
@@ -27,4 +28,3 @@ and handoff work.
 Code is the source of truth for current behavior; these documents are the source
 of truth for intended behavior. Every feature handoff must reconcile the two by
 updating `STATUS.md` and any affected plan, decision, or architecture section.
-
