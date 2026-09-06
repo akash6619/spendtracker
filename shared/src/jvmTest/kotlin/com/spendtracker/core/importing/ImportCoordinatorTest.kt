@@ -210,7 +210,7 @@ private class RecordingTransactionRepository : TransactionRepository {
         fingerprints += transactions.map { it.sourceFingerprint }
     }
     override suspend fun getById(id: String): LedgerTransaction? = null
-    override suspend fun updateOverrides(id: String, category: SpendCategory?, includedInSpend: Boolean?) = Unit
+    override suspend fun updateTransaction(id: String, category: SpendCategory, includedInSpend: Boolean) = Unit
     override fun observeMerchantRules(): Flow<List<MerchantCategoryRule>> = MutableStateFlow(emptyList())
     override suspend fun saveMerchantRule(merchant: String, category: SpendCategory) = Unit
     override suspend fun deleteMerchantRule(merchant: String) = Unit

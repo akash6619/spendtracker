@@ -7,6 +7,7 @@ import com.spendtracker.app.ui.transactions.TransactionActions
 import com.spendtracker.app.ui.transactions.TransactionsScreen
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
 import com.spendtracker.core.model.*
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,11 +34,11 @@ class TransactionsScreenTest {
         compose.onNodeWithText("Apply filters").performClick()
         compose.onNodeWithText("No matching transactions").assertIsDisplayed()
         compose.onNodeWithText("Clear filters").performClick()
-        compose.onNodeWithText(PreviewData.transaction.transaction.merchant!!).assertIsDisplayed()
+        compose.onNodeWithText(PreviewData.transaction.merchant!!).assertIsDisplayed()
     }
 
     @Test
-    fun detailSavesCategoryAndInclusionAndResetsDefaults() {
+    fun detailSavesCategoryAndInclusionStartingFromDetectedValues() {
         compose.setContent {
             var row by remember { mutableStateOf(PreviewData.transaction) }
             var selected by remember { mutableStateOf(false) }
@@ -46,21 +47,77 @@ class TransactionsScreenTest {
                     TransactionsUiState(transactions = listOf(row), selected = row.takeIf { selected }),
                     actions = TransactionActions(
                         open = { selected = true }, close = { selected = false },
-                        save = { category, included -> row = row.copy(userCategory = category, userIncludedInSpend = included) },
+                        save = { category, included -> row = row.copy(category = category, includedInSpend = included) },
                     ),
                 )
             }
         }
-        compose.onNodeWithText(PreviewData.transaction.transaction.merchant!!).performClick()
-        compose.onNodeWithText("Category: Use detected default").performScrollTo().performClick()
+        compose.onNodeWithText(PreviewData.transaction.merchant!!).performClick()
+        // Category editor shows the stored value; inclusion is a toggle at top right.
+        compose.onNodeWithText("Category: Food & dining").assertIsDisplayed()
+        compose.onNodeWithTag("inclusion_toggle").assertIsDisplayed()
+        compose.onNodeWithText("Category: Food & dining").performScrollTo().performClick()
         compose.onNodeWithText("Travel").performScrollTo().performClick()
-        compose.onNodeWithText("Spend inclusion: Use detected default").performScrollTo().performClick()
-        compose.onNodeWithText("Excluded from spend").performClick()
+        compose.onNodeWithTag("inclusion_toggle").performScrollTo().performClick()
         compose.onNodeWithText("Save changes").performScrollTo().performClick()
-        compose.onNodeWithText("Excluded from spend by your override.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Reset to detected defaults").performScrollTo().performClick()
-        compose.onNodeWithText("Included in spend as a detected purchase or fee debit.").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Excluded by default: credits, refunds, transfers, withdrawals, and unknown events are not ordinary spend.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Back to transactions").performScrollTo().performClick()
         compose.onNodeWithText("Filters").assertIsDisplayed()
+    }
+
+    @Test
+    fun sourceViewShowsFoundBodyEphemerallyAndDismisses() {
+        var dismissed = 0
+        val source = mutableStateOf<SourceViewUiState?>(
+            SourceViewUiState.Found("SYNTHETIC SENDER", "SYNTHETIC MESSAGE BODY", 1_788_457_600_000),
+        )
+        compose.setContent {
+            SpendTrackerTheme {
+                TransactionsScreen(
+                    TransactionsUiState(
+                        transactions = listOf(PreviewData.transaction),
+                        selected = PreviewData.transaction,
+                        sourceView = source.value,
+                    ),
+                    actions = TransactionActions(dismissSource = { source.value = null; dismissed += 1 }),
+                )
+            }
+        }
+        compose.onNodeWithTag("source_message_body").assertIsDisplayed()
+        compose.onNodeWithText("SYNTHETIC MESSAGE BODY").assertIsDisplayed()
+        compose.onNodeWithText("Close").performClick()
+        compose.onNodeWithText("SYNTHETIC MESSAGE BODY").assertDoesNotExist()
+        assertEquals(1, dismissed)
+    }
+
+    @Test
+    fun sourceViewExplainsUnavailableMessageAndViewSourceButtonEmitsIntent() {
+        var viewed = 0
+        val source = mutableStateOf<SourceViewUiState?>(null)
+        compose.setContent {
+            SpendTrackerTheme {
+                TransactionsScreen(
+                    TransactionsUiState(
+                        transactions = listOf(PreviewData.transaction),
+                        selected = PreviewData.transaction,
+                        sourceView = source.value,
+                    ),
+                    actions = TransactionActions(
+                        viewSource = { viewed += 1 },
+                        dismissSource = { source.value = null },
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithTag("view_source_message").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("view_source_message").performClick()
+        assertEquals(1, viewed)
+
+        compose.runOnIdle {
+            source.value = SourceViewUiState.Unavailable(
+                com.spendtracker.app.data.SourceUnavailableReason.MESSAGE_NOT_FOUND,
+            )
+        }
+        compose.onNodeWithText("The original message is no longer available on this device. It may have been deleted or replaced.").assertIsDisplayed()
     }
 }

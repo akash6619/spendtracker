@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
             demoRepository = BuildVariantDependencies.createDemoRepository(),
             importRunner = dependencies.importCoordinator,
             initialPermissionGranted = hasSmsPermission(),
+            sourceMessageLookup = dependencies.sourceLookup,
         )
     }
 

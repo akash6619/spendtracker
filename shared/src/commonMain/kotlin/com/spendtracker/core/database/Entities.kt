@@ -10,14 +10,14 @@ import androidx.room3.PrimaryKey
         Index(value = ["sourceType", "sourceProviderId"], unique = true),
         Index(value = ["sourceType", "sourceFingerprint"], unique = true),
         Index(value = ["sourceReceivedAtEpochMillis"]),
-        Index(value = ["detectedCategory"]),
+        Index(value = ["category"]),
     ],
 )
 /**
  * Room representation of one transaction in the local ledger.
- * It stores source identity, inferred financial fields, parser metadata, and
- * nullable user overrides. Raw SMS bodies and sender details are intentionally
- * absent from the schema.
+ * It stores source identity and one single value per financial fact: parser
+ * values initially, user edits afterwards, re-import overwrites. Raw SMS bodies
+ * and sender details are intentionally absent from the schema.
  */
 data class TransactionEntity(
     @PrimaryKey val id: String,
@@ -29,15 +29,14 @@ data class TransactionEntity(
     val currency: String,
     val direction: String,
     val kind: String,
-    val detectedCategory: String,
-    val userCategory: String?,
+    val category: String,
     val merchant: String?,
     val accountHint: String?,
     val confidence: Double,
     val parserVersion: Int,
     val reviewReasons: String = "",
-    val detectedIncludedInSpend: Boolean,
-    val userIncludedInSpend: Boolean?,
+    val includedInSpend: Boolean,
+    val userEdited: Boolean = false,
     val createdAtEpochMillis: Long,
     val updatedAtEpochMillis: Long,
 )

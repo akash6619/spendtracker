@@ -16,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
         MerchantCategoryRuleEntity::class,
         SettingsEntity::class,
     ],
-    version = 3,
+    version = 5,
     exportSchema = true,
 )
 @ConstructedBy(SpendTrackerDatabaseConstructor::class)
@@ -44,6 +44,8 @@ fun RoomDatabase.Builder<SpendTrackerDatabase>.buildSpendTrackerDatabase(): Spen
     setDriver(BundledSQLiteDriver())
         .addMigrations(MIGRATION_1_2)
         .addMigrations(MIGRATION_2_3)
+        .addMigrations(MIGRATION_3_4)
+        .addMigrations(MIGRATION_4_5)
         .setQueryCoroutineContext(Dispatchers.Default)
         .build()
 
@@ -64,6 +66,52 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override suspend fun migrate(connection: SQLiteConnection) {
         connection.execute("ALTER TABLE transactions ADD COLUMN reviewReasons TEXT NOT NULL DEFAULT ''")
+    }
+}
+
+/**
+ * Collapses the detected/user override split into one value per field.
+ * The category keeps its detected value, spend inclusion is folded from the
+ * effective override, rows with any override are marked user-edited so future
+ * imports cannot refresh them, and the override columns disappear.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override suspend fun migrate(connection: SQLiteConnection) {
+        connection.execute("ALTER TABLE transactions RENAME COLUMN detectedCategory TO category")
+        connection.execute("ALTER TABLE transactions ADD COLUMN includedInSpend INTEGER NOT NULL DEFAULT 0")
+        connection.execute("ALTER TABLE transactions ADD COLUMN userEdited INTEGER NOT NULL DEFAULT 0")
+        connection.execute(
+            "UPDATE transactions SET includedInSpend = COALESCE(userIncludedInSpend, detectedIncludedInSpend)",
+        )
+        // The pre-single-value effective category was the override when present.
+        connection.execute("UPDATE transactions SET category = COALESCE(userCategory, category)")
+        // Preserve re-import protection for edits made before the single-value model.
+        connection.execute(
+            "UPDATE transactions SET userEdited = 1 WHERE userCategory IS NOT NULL OR userIncludedInSpend IS NOT NULL",
+        )
+        connection.execute("ALTER TABLE transactions DROP COLUMN userIncludedInSpend")
+        connection.execute("ALTER TABLE transactions DROP COLUMN detectedIncludedInSpend")
+        connection.execute("ALTER TABLE transactions DROP COLUMN userCategory")
+    }
+}
+
+/**
+ * Adds the edit flag for databases created directly at version 4. Databases
+ * migrated from version 3 already received the column (with override-derived
+ * values) in MIGRATION_3_4, so the add is guarded.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override suspend fun migrate(connection: SQLiteConnection) {
+        val hasUserEdited = connection.prepare("PRAGMA table_info(transactions)").use { statement ->
+            var found = false
+            while (statement.step()) {
+                if (statement.getText(1) == "userEdited") found = true
+            }
+            found
+        }
+        if (!hasUserEdited) {
+            connection.execute("ALTER TABLE transactions ADD COLUMN userEdited INTEGER NOT NULL DEFAULT 0")
+        }
     }
 }
 

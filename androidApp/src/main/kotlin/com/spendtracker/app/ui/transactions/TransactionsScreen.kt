@@ -35,7 +35,6 @@ import com.spendtracker.app.ui.theme.SpendTrackerTheme
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.TransactionFilter
-import com.spendtracker.core.model.needsReview
 
 @Composable
 fun TransactionsScreen(
@@ -101,9 +100,8 @@ fun TransactionsScreen(
 
 @Composable
 private fun TransactionRow(transaction: LedgerTransaction, onClick: () -> Unit) {
-    val parsed = transaction.transaction
-    val amount = formatMoney(parsed.money)
-    val category = stringResource(transaction.effectiveCategory.labelResource())
+    val amount = formatMoney(transaction.money)
+    val category = stringResource(transaction.category.labelResource())
     Card(
         onClick = onClick,
         modifier = Modifier
@@ -120,7 +118,7 @@ private fun TransactionRow(transaction: LedgerTransaction, onClick: () -> Unit) 
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    parsed.merchant
+                    transaction.merchant
                         ?: stringResource(R.string.transaction_unknown_merchant),
                     style = MaterialTheme.typography.titleMedium,
                 )
@@ -128,25 +126,24 @@ private fun TransactionRow(transaction: LedgerTransaction, onClick: () -> Unit) 
                     stringResource(
                         R.string.transaction_meta,
                         category,
-                        formatDate(parsed.sourceReceivedAtEpochMillis),
+                        formatDate(transaction.sourceReceivedAtEpochMillis),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 when {
-                    parsed.money.currency != CurrencyCode.INR -> Text(
+                    transaction.money.currency != CurrencyCode.INR -> Text(
                         stringResource(R.string.transaction_foreign),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
 
-                    !transaction.isIncludedInSpend -> Text(
+                    !transaction.includedInSpend -> Text(
                         stringResource(R.string.transaction_excluded),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (transaction.needsReview) Text(stringResource(R.string.review_needed), style = MaterialTheme.typography.labelMedium)
             }
             Text(amount, style = MaterialTheme.typography.titleMedium)
         }

@@ -24,8 +24,10 @@ data class TransactionActions(
     val filter: (TransactionFilter) -> Unit = {},
     val open: (String) -> Unit = {},
     val close: () -> Unit = {},
-    val save: (SpendCategory?, Boolean?) -> Unit = { _, _ -> },
+    val save: (SpendCategory, Boolean) -> Unit = { _, _ -> },
     val retry: () -> Unit = {},
+    val viewSource: () -> Unit = {},
+    val dismissSource: () -> Unit = {},
 )
 
 @Composable
@@ -71,10 +73,8 @@ internal fun FilterDialog(filter: TransactionFilter, onApply: (TransactionFilter
                     { it?.let { category -> stringResource(category.labelResource()) } ?: stringResource(R.string.filter_all) }) { draft = draft.copy(category = it) }
                 Choice(stringResource(R.string.field_inclusion), draft.included, listOf(null, true, false),
                     { stringResource(when(it) { true -> R.string.filter_included; false -> R.string.transaction_excluded; null -> R.string.filter_all }) }) { draft = draft.copy(included = it) }
-                Choice(stringResource(R.string.field_review), draft.needsReview, listOf(null, true, false),
-                    { stringResource(when(it) { true -> R.string.review_needed; false -> R.string.review_clear; null -> R.string.filter_all }) }) { draft = draft.copy(needsReview = it) }
                 Choice(stringResource(R.string.field_currency), draft.currency, listOf(null) + CurrencyCode.entries,
-                    { it?.name ?: stringResource(R.string.filter_all) }) { draft = draft.copy(currency = it) }
+                    { it?.name ?: stringResource(R.string.filter_all) }) { draft = draft.copy(currency = it, foreignOnly = false) }
                 if (invalid) Text(stringResource(R.string.filter_invalid_date), color = MaterialTheme.colorScheme.error)
             }
         },

@@ -1,9 +1,9 @@
 # Current status
 
 - Last updated: 2026-09-06
-- Current milestone: MVP-06 transaction list, filters, and detail/edit complete
-- Next recommended slice: MVP-07 weekly and monthly dashboard
-- Active work: None
+- Current milestone: MVP-07 weekly and monthly dashboard complete
+- Next recommended slice: MVP-08 new-message ingestion and reconciliation
+- Active work: none
 
 ## Active work
 
@@ -11,7 +11,6 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 | Slice | Agent/task | Files or area | Started | Notes |
 | --- | --- | --- | --- | --- |
-| None | — | — | — | MVP-06 complete; MVP-07 is ready |
 
 ## Implemented now
 
@@ -78,6 +77,47 @@ Agents must claim work here before implementation and clear the row at handoff.
 - Initial kind, direction, merchant, account hint, category, and confidence rules.
 - Credits/refunds/transfers/ATM withdrawals excluded from spend by policy.
 - Persisted results feeding a dashboard summary and chronological transaction list.
+- Shared `PeriodCalculator` produces Monday-start week and local-calendar-month
+  windows, plus same-elapsed-day previous-period comparison windows, from an
+  injected instant and time zone; DST transitions only change elapsed hours.
+- Shared `ReportAggregator` derives included-INR headline, exact category sums,
+  daily series, and foreign/excluded/review counts from the observed ledger.
+- Dashboard period selector (Week/Month), headline with previous-period
+  percentage, category breakdown with shares, accessible daily-spend bars, and
+  explicit no-INR and empty states.
+- Category, excluded, foreign, and review facts deep link to Transactions with
+  the same period range and matching filter; `TransactionFilter` gained a
+  default-false `foreignOnly` dimension.
+- Dashboard facts recompute on ledger changes, period switches, and app resume,
+  so time-zone changes regroup boundaries without data loss (D-016).
+- On-demand `View source message` in transaction detail resolves the persisted
+  SMS provider row ID at display time and verifies the fetched row against the
+  stored installation-local fingerprint before showing anything, so a reused
+  provider ID can never display an unrelated SMS. The body stays in an ephemeral
+  dialog, is cleared on dismiss/selection change/close, and is never persisted
+  or logged (D-017). Unavailable messages and revoked permission get explicit
+  safe explanations.
+- Saving a category resolves only the category review concern (D-018): an
+  explicit category drops `UNKNOWN_CATEGORY`, other stored reasons survive, and
+  confidence follows the surviving set. A missing merchant no longer flags
+  review and the parser adds an `on X` merchant anchor. Review is hidden from
+  the UI (list, detail, dashboard, filter) until a full-transaction edit can
+  close all concerned fields; the data-layer reasons and rule remain intact.
+  The reset-to-defaults action is gone; detail editors start from effective
+  (detected) values and every save stores the chosen values.
+- Single-value model (D-019): Room schema version 4 drops the detected/user
+  override split, category keeps one value, inclusion is a non-null boolean
+  shown as a detail toggle at top right; version 5 adds `userEdited`. Imports
+  stay idempotent (UNIQUE provider-ID and fingerprint indexes) and refresh only
+  untouched rows, so an improved parser can re-derive fields while user-edited
+  rows survive re-import, duplicate broadcasts, and reconciliation overlap.
+  The v3-to-v4 fold also migrates pre-model edits: effective category and
+  inclusion become the single values and `userEdited` is set, so migrated
+  corrections keep their re-import protection. Migration chain tested from
+  version 1.
+- Sixty shared JVM tests, twenty-four Android local tests, fourteen connected
+  Compose tests, two connected importer/provider tests, and one connected
+  Keystore test.
 - No raw SMS persistence, login, backend, or internet permission.
 - Thirty-three shared JVM tests, twelve Android local tests, six connected Compose
   tests, two connected importer/provider tests, and one connected Keystore test.
@@ -216,15 +256,48 @@ override saves and reset. Saved edits update the list and dashboard and keep the
 selected detail open even when it no longer matches filters. Source viewing is
 explicitly unavailable, and no raw SMS is read by these screens.
 
+On 2026-09-06, the MVP-07 gate completed successfully:
+
+```shell
+./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:jvmTest \
+  :androidApp:testDebugUnitTest :androidApp:lintDebug \
+  :androidApp:assembleDebug :androidApp:assembleRelease
+ANDROID_SERIAL=emulator-5554 ./gradlew :androidApp:connectedDebugAndroidTest
+```
+
+The shared suite includes week/month boundaries across month, year, leap,
+DST, and Kolkata/UTC zones, exact category-sum invariants, comparison rounding,
+daily bucketing, and foreign/excluded/review counts. Eighteen Android unit tests
+cover fixed-clock dashboard totals, period switching, comparison percentages,
+deep-link filters, and zone-change recomputation on resume. Fourteen connected Compose tests and the
+importer/Keystore tests passed on emulator-5554 (API 37),
+including the new DashboardScreenTest coverage.
+
+Manual checks used the debug demo on `SpendTracker_API_37`: week and month
+windows, headline, comparison, excluded/foreign/review counts, category
+breakdown with shares, daily bars with per-day descriptions, a category
+deep link landing on a filtered Transactions list, and a 150% font-scale pass.
+The emulator font scale was restored afterwards; no physical device was targeted.
+
+After the MVP-07 gate, the source-message view (MVP-06 optional item) completed:
+a detail-screen `View source message` action resolves the provider row ID on
+demand and shows sender, timestamp, and body in an ephemeral dialog. The same
+full build gate passed with twenty-one Android unit tests, seventeen connected
+tests (fourteen Compose), and lint/debug/release assembly. Manual checks on the
+emulator confirmed the dialog and its permission-revoked explanation; the
+live-found path with a real provider row remains release validation on a
+physical device.
+
 ## Known gaps
 
 - Top-level destination survives configuration changes through the ViewModel but
   is not restored after process death.
 - Parser templates remain a conservative controlled-MVP corpus rather than
   attempting universal bank coverage; unmatched messages are now explainable.
-- Database paging and original-message viewing are deferred; lazy UI rows filter
-  the observed parsed ledger. Unsaved editor drafts are not restored after process death.
-- Weekly and monthly aggregations do not exist.
+- Database paging is deferred; lazy UI rows filter the observed parsed ledger.
+  Unsaved editor drafts are not restored after process death.
+- Source viewing relies on the system SMS provider; live-found-path behavior on
+  OEM providers and physical devices remains release work.
 - There is no `RECEIVE_SMS` live ingestion; foreground overlap reconciliation exists.
 - The Settings shell exists, but delete-all and complete data-lifecycle controls
   do not.
@@ -234,13 +307,13 @@ explicitly unavailable, and no raw SMS is read by these screens.
 
 ## Open questions
 
-These do not block starting MVP-07. Resolve them in the owning slice and record
+These do not block starting MVP-08. Resolve them in the owning slice and record
 a decision:
 
 1. Exact confidence threshold for automatic acceptance versus needs-review.
-2. Whether the source-SMS deep link is worth exposing in MVP after privacy and
-   OEM-provider behavior are tested.
-3. Final Google Play declaration/distribution path for SMS permission approval.
+2. Final Google Play declaration/distribution path for SMS permission approval.
+3. Widening merchant detection beyond `at`/`to`/`on`/`info:` anchors and its
+   effect on category quality.
 
 ## Handoff update checklist
 

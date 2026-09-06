@@ -4,6 +4,7 @@ import android.app.Application
 import com.spendtracker.app.data.AndroidSourceFingerprinter
 import com.spendtracker.app.data.CalendarHistoryCutoffProvider
 import com.spendtracker.app.data.SmsInboxReader
+import com.spendtracker.app.data.SmsSourceLookup
 import com.spendtracker.core.database.createSpendTrackerDatabase
 import com.spendtracker.core.importing.ImportCoordinator
 import com.spendtracker.core.parser.FinancialMessageParser
@@ -28,6 +29,7 @@ class SpendTrackerApplication : Application() {
     }
     val importStateRepository by lazy { RoomImportStateRepository(database.appStateDao()) }
     val fingerprinter by lazy { AndroidSourceFingerprinter() }
+    val sourceLookup by lazy { SmsSourceLookup(this, fingerprinter) }
     val importCoordinator by lazy {
         ImportCoordinator(
             messageSource = SmsInboxReader(this),

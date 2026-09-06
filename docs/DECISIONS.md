@@ -174,3 +174,99 @@ entry that records the reason, migration impact, and affected tests.
   do not dismiss original review concerns. Source viewing remains deferred pending
   provider/privacy validation; this version displays parsed fields only. Merchant
   rule management remains a repository capability with no automatic UI creation.
+
+## D-016 — Weekly/monthly aggregation and comparison rule
+
+- Date: 2026-09-06
+- Status: Accepted and validated
+- Decision: MVP-07 aggregates the observed parsed ledger in memory with shared
+  pure functions. Weeks run Monday 00:00 through the next Monday 00:00; months
+  are local calendar months, both computed from an injected instant and the
+  device time zone. The headline comparison uses the same number of elapsed
+  days in the immediately previous period (on a Wednesday the comparison is the
+  previous Monday-through-Wednesday; month comparisons cap at the previous
+  month's end). The percentage is the nearest-integer rounding of
+  `(current − previous) × 100 / previous` and is null when the previous baseline
+  is zero. Tapping a category or the excluded/foreign/review count opens
+  Transactions with the same period range plus the matching dimension;
+  `TransactionFilter` gains a default-false `foreignOnly` field.
+- Reason: Uses auditable stored records, keeps a partial current period
+  comparable like-for-like, and keeps all money math in exact minor units.
+- Consequence: Changing time zone recomputes ranges deterministically from the
+  same stored data without data loss or schema change. Existing D-010 boundary
+  rules are unchanged. The previous-period comparison is display-only and never
+  feeds monetary totals.
+
+## D-017 — Expose on-demand source-message viewing
+
+- Date: 2026-09-06
+- Status: Accepted
+- Decision: The transaction detail screen gains an explicit `View source
+  message` action. On user action only, the app resolves the persisted SMS
+  provider row ID against the system inbox and shows sender, timestamp, and
+  body in an ephemeral dialog. The body is held only while the dialog is open,
+  is cleared on dismiss, selection change, and detail close, and is never
+  persisted, cached, or logged. Missing rows, missing provider ID, revoked
+  permission, and provider failures map to explicit safe explanations.
+- Reason: Users need the raw message to decide which parsed fields to correct;
+  the action is user-initiated, so it stays within the source-lookup policy in
+  `DATA_AND_PRIVACY.md`.
+- Consequence: The `SmsSourceLookup` Android adapter queries the provider at
+  display time and cannot repair a deleted message; the parsed record keeps
+  working regardless. Demo/imported rows without a real provider row show the
+  unavailable explanation. No manifest or schema change is required.
+
+## D-018 — Review resolution on save and missing-merchant treatment
+
+- Date: 2026-09-06
+- Status: Accepted
+- Decision: A manual save can only resolve the category concern. Saving an
+  explicit category drops `UNKNOWN_CATEGORY`. Every other stored reason
+  (`CONFLICTING_AMOUNTS`, `CONFLICTING_DIRECTIONS`, `UNKNOWN_KIND`) survives the
+  save, and confidence is recomputed from the surviving reasons (0.35 for
+  conflicts, 0.60 for other reasons, 0.90 when none remain). A missing merchant
+  is not a review concern: the parser no longer emits `MISSING_MERCHANT`,
+  `needsReview` ignores rows whose only stored reason is `MISSING_MERCHANT`, and
+  unknown kind is represented solely by `UNKNOWN_KIND` instead of a second kind
+  check. The merchant regex additionally accepts an `on X` anchor with
+  digit/possessive guards. The detail screen omits the review line when nothing
+  needs review.
+- Reason: Review noise came almost entirely from the intentionally narrow
+  merchant detection. A save only proves the category choice, so it must close
+  only that concern; amount, direction, and type ambiguity need their own
+  resolution later.
+- Consequence: This supersedes the relevant parts of D-015: saving a category
+  resolves the category review concern instead of leaving review open, while
+  other concerns stay visible. Existing rows with only `MISSING_MERCHANT` leave
+  review automatically. The `TransactionReviewReason.MISSING_MERCHANT` enum
+  remains for stored-data compatibility. The review system is removed from all
+  UI surfaces (list labels, detail flags, dashboard count, filter option) until
+  a full-transaction edit can resolve every concerned field; parser reasons,
+  stored reasons, and the `needsReview` rule stay intact in the data layer.
+  The reset-to-defaults action is removed: editors start from the effective
+  (detected) values, a null category changes nothing about review, and no
+  reason-restoration logic exists.
+
+## D-019 — Single-value transaction model
+
+- Date: 2026-09-06
+- Status: Accepted
+- Decision: Every transaction field has exactly one value. The detected/user
+  override split (userCategory/userIncludedInSpend/detectedIncludedInSpend) is
+  removed from the model, Room schema, and UI. Parser values populate each field
+  on import; the user can later change them; a re-import of the same source
+  message overwrites them with fresh parser values. Spend inclusion is a
+  non-null boolean rendered as a toggle at the top right of transaction detail.
+- Reason: Two values per field added complexity without user benefit; the
+  product direction is simple, editable facts.
+- Consequence: Room schema version 4 renames detectedCategory to category, folds
+  inclusion from the effective override, and drops the override columns; version
+  5 adds a `userEdited` flag (both migrations tested from version 1). Imports
+  stay idempotent: a duplicate broadcast or reconciliation overlap of the same
+  source (fingerprint or provider ID) never duplicates a row, untouched rows are
+  refreshed by a re-import so an improved parser can re-derive fields, and
+  user-edited rows are frozen and never overwritten. Merchant rules apply only
+  to rows being refreshed or first inserted. Uniqueness is enforced by Room
+  UNIQUE indexes on `(sourceType, sourceProviderId)` and
+  `(sourceType, sourceFingerprint)`. D-013/D-015 override-preservation semantics
+  no longer apply.

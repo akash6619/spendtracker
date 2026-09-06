@@ -65,7 +65,7 @@ class TransactionCategorizerTest {
         )
 
         assertTrue(TransactionReviewReason.UNKNOWN_CATEGORY in outcome.reasons)
-        assertTrue(outcome.transaction.isIncludedInSpend)
+        assertTrue(outcome.transaction.includedInSpend)
     }
 
     @Test

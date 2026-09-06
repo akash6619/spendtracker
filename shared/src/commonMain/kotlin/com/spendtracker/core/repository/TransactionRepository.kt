@@ -10,8 +10,8 @@ import kotlinx.coroutines.flow.Flow
  * Domain-facing source of truth for the local transaction ledger.
  *
  * It exposes observable records without Room types, accepts privacy-safe import
- * candidates, supports detail and user-override updates, and can erase stored
- * transactions. Implementations must preserve overrides during every re-import.
+ * candidates, supports single-value field updates, and can erase stored
+ * transactions. Implementations must preserve uniqueness during every re-import.
  */
 interface TransactionRepository {
     fun observeTransactions(): Flow<List<LedgerTransaction>>
@@ -20,10 +20,10 @@ interface TransactionRepository {
 
     suspend fun getById(id: String): LedgerTransaction?
 
-    suspend fun updateOverrides(
+    suspend fun updateTransaction(
         id: String,
-        category: SpendCategory?,
-        includedInSpend: Boolean?,
+        category: SpendCategory,
+        includedInSpend: Boolean,
     )
 
     fun observeMerchantRules(): Flow<List<MerchantCategoryRule>>

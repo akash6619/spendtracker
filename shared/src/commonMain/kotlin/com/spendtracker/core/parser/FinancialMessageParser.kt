@@ -50,7 +50,6 @@ class FinancialMessageParser(
             if (directionResult.conflicting) add(TransactionReviewReason.CONFLICTING_DIRECTIONS)
             if (kind == TransactionKind.UNKNOWN) add(TransactionReviewReason.UNKNOWN_KIND)
             if (category == SpendCategory.OTHER) add(TransactionReviewReason.UNKNOWN_CATEGORY)
-            if (kind == TransactionKind.PURCHASE && merchant == null) add(TransactionReviewReason.MISSING_MERCHANT)
         }
         val parsed = ParsedTransaction(
             sourceId = message.sourceId,
@@ -61,10 +60,10 @@ class FinancialMessageParser(
             category = category,
             merchant = merchant,
             accountHint = ACCOUNT_HINT.find(text)?.groupValues?.get(1),
-            confidence = confidence(reviewReasons, merchant),
+            confidence = confidence(reviewReasons),
             parserVersion = version,
             // Conflicting monetary facts stay visible but cannot affect totals before confirmation.
-            detectedIncludedInSpend = reviewReasons.none {
+            includedInSpend = reviewReasons.none {
                 it == TransactionReviewReason.CONFLICTING_AMOUNTS ||
                     it == TransactionReviewReason.CONFLICTING_DIRECTIONS
             } && directionResult.direction == TransactionDirection.DEBIT &&
@@ -165,13 +164,12 @@ class FinancialMessageParser(
         return merchant.trim(' ', '.', ',', '-').takeIf { it.length >= 2 }?.take(MAX_MERCHANT_LENGTH)
     }
 
-    private fun confidence(reasons: Set<TransactionReviewReason>, merchant: String?): Double = when {
+    private fun confidence(reasons: Set<TransactionReviewReason>): Double = when {
         reasons.any {
             it == TransactionReviewReason.CONFLICTING_AMOUNTS ||
                 it == TransactionReviewReason.CONFLICTING_DIRECTIONS
         } -> 0.35
         reasons.isNotEmpty() -> 0.60
-        merchant == null -> 0.78
         else -> 0.90
     }
 
@@ -207,7 +205,7 @@ class FinancialMessageParser(
         val NUMBER_FORMAT = Regex("(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{2})*,[0-9]{3}|[0-9]{1,3}(?:,[0-9]{3})+)(?:\\.[0-9]+)?")
         val CURRENCY_SIGNAL = Regex("(?i)(?:₹|\\$|€|£|¥|\\b(?:INR|RS\\.?|USD|EUR|GBP|JPY|AUD|CAD)\\b)")
         val ACCOUNT_HINT = Regex("(?i)(?:a/?c|account|card)(?:\\s+(?:no\\.?|number|ending|xx|x))*[\\s:*#-]*[xX*.-]*([0-9]{3,6})")
-        val MERCHANT = Regex("(?i)(?:\\bat\\b|\\bto\\b|info:)\\s+([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\\s+(?:on|using|via|ref|avl|available|from|for|was)\\b|[.;]|$)")
+        val MERCHANT = Regex("(?i)(?:\\bat\\b|\\bto\\b|\\bon\\b|info:)\\s+(?!\\d|your\\b|my\\b|the\\b|this\\b)([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\\s+(?:on|using|via|ref|avl|available|from|for|was)\\b|[.;]|$)")
         val OTP_OR_AUTHORIZATION = Regex("(?i)\\b(?:otp|one[ -]time password|verification code|do not share|authorization only|pre-?authori[sz](?:ation|ed)|pending transaction)\\b")
         val FAILED_OR_CANCELLED = Regex("(?i)\\b(?:declined|failed|unsuccessful|not processed|cancelled|canceled|rejected)\\b")
         val BALANCE_ONLY = Regex("(?i)\\b(?:available|avl|current|closing)\\s+(?:balance|bal)\\b|\\bbalance enquiry\\b")

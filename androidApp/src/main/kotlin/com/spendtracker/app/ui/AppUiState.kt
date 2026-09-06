@@ -1,5 +1,9 @@
 package com.spendtracker.app.ui
 
+import com.spendtracker.app.data.SourceUnavailableReason
+import com.spendtracker.core.aggregation.DashboardPeriod
+import com.spendtracker.core.aggregation.PeriodComparison
+import com.spendtracker.core.aggregation.PeriodReport
 import com.spendtracker.core.importing.ImportProgress
 import com.spendtracker.core.importing.ImportRunStatus
 import com.spendtracker.core.model.LedgerTransaction
@@ -61,16 +65,38 @@ data class ScanSummaryUiState(
 )
 
 /**
- * Render-ready summary for the current dashboard shell.
- * It includes only effectively included INR spend plus counts for included and
- * foreign transactions; period analytics arrive in MVP-07.
+ * Render-ready dashboard state for the selected reporting period.
+ *
+ * [report] carries the shared period facts (headline, categories, daily series,
+ * counts); it is null only while the ledger is empty. [comparison] describes the
+ * same-elapsed-days change versus the previous period and is null when there is
+ * no baseline. Aggregation rules live in shared [PeriodReport] types.
  */
 data class DashboardUiState(
-    val inrSpendMinor: Long = 0,
-    val includedTransactions: Int = 0,
-    val foreignTransactions: Int = 0,
+    val period: DashboardPeriod = DashboardPeriod.WEEK,
+    val report: PeriodReport? = null,
+    val comparison: PeriodComparison? = null,
+    val hasTransactions: Boolean = false,
     val isDemo: Boolean = false,
 )
+
+/**
+ * Ephemeral state for the on-demand original-message view.
+ * [Found] holds the raw body only while the dialog is open; the ViewModel clears
+ * it on dismiss, on selection change, and when the detail closes. The body is
+ * never persisted and never logged.
+ */
+sealed interface SourceViewUiState {
+    data object Loading : SourceViewUiState
+
+    data class Found(
+        val sender: String,
+        val body: String,
+        val receivedAtEpochMillis: Long,
+    ) : SourceViewUiState
+
+    data class Unavailable(val reason: SourceUnavailableReason) : SourceViewUiState
+}
 
 /**
  * Render-ready state for the current transaction list.
@@ -88,6 +114,7 @@ data class TransactionsUiState(
     val isSaving: Boolean = false,
     val saveFailed: Boolean = false,
     val saveSucceeded: Boolean = false,
+    val sourceView: SourceViewUiState? = null,
 )
 
 /**

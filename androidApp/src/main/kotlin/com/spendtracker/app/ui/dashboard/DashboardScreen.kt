@@ -1,21 +1,35 @@
 package com.spendtracker.app.ui.dashboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.spendtracker.app.R
@@ -23,15 +37,37 @@ import com.spendtracker.app.ui.DashboardUiState
 import com.spendtracker.app.ui.components.DemoBanner
 import com.spendtracker.app.ui.components.InfoCard
 import com.spendtracker.app.ui.components.ScreenHeader
+import com.spendtracker.app.ui.format.dayLabel
 import com.spendtracker.app.ui.format.formatMoney
+import com.spendtracker.app.ui.format.formatRange
+import com.spendtracker.app.ui.format.labelResource
+import com.spendtracker.app.ui.format.weekdayShortLabel
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.core.aggregation.DashboardPeriod
+import com.spendtracker.core.aggregation.DailySpend
+import com.spendtracker.core.aggregation.PeriodReport
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.Money
+import com.spendtracker.core.model.SpendCategory
+import kotlin.math.roundToInt
+
+/**
+ * Intents the dashboard emits for period selection and explainable deep links.
+ * Default callbacks keep previews independent of the ViewModel; every callback
+ * opens a transaction view whose filter reproduces the tapped dashboard fact.
+ */
+data class DashboardActions(
+    val onPeriodSelected: (DashboardPeriod) -> Unit = {},
+    val onCategorySelected: (SpendCategory) -> Unit = {},
+    val onExcludedSelected: () -> Unit = {},
+    val onForeignSelected: () -> Unit = {},
+)
 
 @Composable
 fun DashboardScreen(
     state: DashboardUiState,
     modifier: Modifier = Modifier,
+    actions: DashboardActions = DashboardActions(),
 ) {
     Column(
         modifier = modifier
@@ -46,62 +82,260 @@ fun DashboardScreen(
         )
         if (state.isDemo) DemoBanner()
 
-        if (state.includedTransactions == 0) {
+        PeriodSelector(state.period, actions.onPeriodSelected)
+
+        val report = state.report
+        if (report == null) {
             InfoCard(
                 title = stringResource(R.string.dashboard_empty_title),
                 body = stringResource(R.string.dashboard_empty_body),
             )
         } else {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+            HeadlineCard(state, actions)
+            if (report.includedInrTotalMinor == 0L) {
+                InfoCard(
+                    title = stringResource(R.string.dashboard_no_inr_title),
+                    body = stringResource(R.string.dashboard_no_inr_body),
+                )
+            }
+            if (report.categoryBreakdown.isNotEmpty()) {
+                CategoryBreakdownCard(report, actions)
+            }
+            DailySpendCard(report)
+        }
+    }
+}
+
+@Composable
+private fun PeriodSelector(selected: DashboardPeriod, onSelected: (DashboardPeriod) -> Unit) {
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        DashboardPeriod.entries.forEachIndexed { index, period ->
+            SegmentedButton(
+                selected = period == selected,
+                onClick = { onSelected(period) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = DashboardPeriod.entries.size),
+                modifier = Modifier.testTag(
+                    if (period == DashboardPeriod.WEEK) "period_week" else "period_month",
+                ),
+            ) {
+                Text(
+                    stringResource(
+                        if (period == DashboardPeriod.WEEK) R.string.period_week else R.string.period_month,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeadlineCard(
+    state: DashboardUiState,
+    actions: DashboardActions,
+) {
+    val report = state.report ?: return
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(
+                    if (state.period == DashboardPeriod.WEEK) R.string.dashboard_this_week else R.string.dashboard_this_month,
+                ),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                formatRange(report.range.startInclusiveEpochMillis, report.range.endExclusiveEpochMillis),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                formatMoney(Money(report.includedInrTotalMinor, CurrencyCode.INR)),
+                style = MaterialTheme.typography.displaySmall,
+            )
+            Text(
+                pluralStringResource(
+                    R.plurals.included_transaction_count,
+                    report.includedInrCount,
+                    report.includedInrCount,
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            ComparisonLine(state)
+            if (report.excludedCount > 0) {
+                LinkRow(
+                    label = pluralStringResource(
+                        R.plurals.excluded_transaction_count,
+                        report.excludedCount,
+                        report.excludedCount,
+                    ),
+                    description = stringResource(R.string.link_excluded_cd),
+                    tag = "link_excluded",
+                    onClick = actions.onExcludedSelected,
+                )
+            }
+            if (report.foreignCount > 0) {
+                LinkRow(
+                    label = pluralStringResource(
+                        R.plurals.foreign_transaction_count,
+                        report.foreignCount,
+                        report.foreignCount,
+                    ),
+                    description = stringResource(R.string.link_foreign_cd),
+                    tag = "link_foreign",
+                    onClick = actions.onForeignSelected,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComparisonLine(state: DashboardUiState) {
+    val comparison = state.comparison ?: return
+    val periodWord = stringResource(
+        if (state.period == DashboardPeriod.WEEK) R.string.period_week_word else R.string.period_month_word,
+    )
+    val text = comparison.deltaPercent?.let { percent ->
+        stringResource(R.string.comparison_format, percent, periodWord)
+    } ?: stringResource(R.string.comparison_none, periodWord)
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun LinkRow(label: String, description: String, tag: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(tag)
+            .semantics { contentDescription = description },
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun CategoryBreakdownCard(report: PeriodReport, actions: DashboardActions) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                stringResource(R.string.category_breakdown_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            report.categoryBreakdown.forEach { categorySpend ->
+                val share = ((categorySpend.totalMinor * 100.0) / report.includedInrTotalMinor).roundToInt()
+                val categoryLabel = stringResource(categorySpend.category.labelResource())
+                val description = stringResource(R.string.link_category_cd, categoryLabel)
+                TextButton(
+                    onClick = { actions.onCategorySelected(categorySpend.category) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("category_row_${categorySpend.category.name}")
+                        .semantics {
+                            contentDescription = description
+                        },
                 ) {
-                    Text(
-                        stringResource(R.string.detected_spend),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        formatMoney(
-                            Money(
-                                amountMinor = state.inrSpendMinor,
-                                currency = CurrencyCode.INR,
-                            ),
-                        ),
-                        style = MaterialTheme.typography.displaySmall,
-                    )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            pluralStringResource(
-                                R.plurals.included_transaction_count,
-                                state.includedTransactions,
-                                state.includedTransactions,
-                            ),
+                            "$categoryLabel · ${stringResource(R.string.category_share, share)}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                    }
-                    if (state.foreignTransactions > 0) {
                         Text(
-                            pluralStringResource(
-                                R.plurals.foreign_transaction_count,
-                                state.foreignTransactions,
-                                state.foreignTransactions,
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            "${formatMoney(Money(categorySpend.totalMinor, CurrencyCode.INR))} · " +
+                                pluralStringResource(
+                                    R.plurals.category_transaction_count,
+                                    categorySpend.transactionCount,
+                                    categorySpend.transactionCount,
+                                ),
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }
             }
         }
+    }
+}
 
-        InfoCard(
-            title = stringResource(R.string.dashboard_future_title),
-            body = stringResource(R.string.dashboard_future_body),
+@Composable
+private fun DailySpendCard(report: PeriodReport) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.daily_spend_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            val max = report.dailySeries.maxOfOrNull { it.totalMinor } ?: 0L
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(96.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                report.dailySeries.forEachIndexed { index, day ->
+                    Bar(day, max, index)
+                }
+            }
+            if (report.period == DashboardPeriod.WEEK) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    report.dailySeries.forEachIndexed { index, day ->
+                        Text(
+                            weekdayShortLabel(day.dayStartEpochMillis),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.Bar(day: DailySpend, max: Long, index: Int) {
+    val fraction = if (max == 0L) {
+        0.02f
+    } else {
+        maxOf(0.02f, day.totalMinor.toFloat() / max)
+    }
+    val description = stringResource(
+        R.string.daily_bar_cd,
+        dayLabel(day.dayStartEpochMillis),
+        formatMoney(Money(day.totalMinor, CurrencyCode.INR)),
+    )
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .testTag("daily_bar_$index")
+            .semantics {
+                contentDescription = description
+            },
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .fillMaxHeight(fraction)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.primary),
         )
     }
 }
@@ -110,14 +344,15 @@ fun DashboardScreen(
 @Composable
 private fun DashboardContentPreview() {
     SpendTrackerTheme {
-        DashboardScreen(
-            DashboardUiState(
-                inrSpendMinor = 352_550,
-                includedTransactions = 3,
-                foreignTransactions = 1,
-                isDemo = true,
-            ),
-        )
+        DashboardScreen(dashboardUiState(DashboardPeriod.WEEK))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DashboardMonthPreview() {
+    SpendTrackerTheme {
+        DashboardScreen(dashboardUiState(DashboardPeriod.MONTH))
     }
 }
 
@@ -127,4 +362,57 @@ private fun DashboardEmptyPreview() {
     SpendTrackerTheme {
         DashboardScreen(DashboardUiState())
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun DashboardNoInrPreview() {
+    SpendTrackerTheme {
+        DashboardScreen(
+            DashboardUiState(
+                period = DashboardPeriod.WEEK,
+                report = com.spendtracker.core.aggregation.PeriodReport(
+                    period = DashboardPeriod.WEEK,
+                    range = com.spendtracker.core.aggregation.DateRange(0, 0),
+                    includedInrTotalMinor = 0,
+                    includedInrCount = 0,
+                    categoryBreakdown = emptyList(),
+                    foreignCount = 2,
+                    excludedCount = 1,
+                    reviewCount = 1,
+                    dailySeries = emptyList(),
+                ),
+                comparison = com.spendtracker.core.aggregation.PeriodComparison(0, 0, 0, null),
+                hasTransactions = true,
+            ),
+        )
+    }
+}
+
+private fun dashboardUiState(period: DashboardPeriod): DashboardUiState {
+    val zone = kotlinx.datetime.TimeZone.UTC
+    val now = java.time.Instant.parse("2026-09-09T12:00:00Z").toEpochMilli()
+    val range = com.spendtracker.core.aggregation.PeriodCalculator.currentRange(now, zone, period)
+    val report = com.spendtracker.core.aggregation.ReportAggregator.compute(
+        com.spendtracker.app.ui.PreviewData.dashboardLedger,
+        range,
+        period,
+        zone,
+    )
+    val previous = com.spendtracker.core.aggregation.ReportAggregator.compute(
+        com.spendtracker.app.ui.PreviewData.dashboardLedger,
+        com.spendtracker.core.aggregation.PeriodCalculator.sameElapsedPreviousRange(now, zone, period),
+        period,
+        zone,
+    )
+    return DashboardUiState(
+        period = period,
+        report = report,
+        comparison = com.spendtracker.core.aggregation.ReportAggregator.compare(
+            report.includedInrTotalMinor,
+            previous.includedInrTotalMinor,
+        ),
+        hasTransactions = true,
+        isDemo = true,
+    )
 }

@@ -11,9 +11,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Opens a literal version-1 database through the current version-3 builder.
- * This validates both the migration SQL and Room's final schema verification
- * while confirming old completion/counter data remains intact.
+ * Opens a literal version-1 database through the current version-5 builder.
+ * This validates the full migration chain (override columns removed, category
+ * renamed, inclusion folded, userEdited added) while confirming old data
+ * remains intact.
  */
 class SpendTrackerDatabaseMigrationTest {
     @Test
@@ -32,6 +33,13 @@ class SpendTrackerDatabaseMigrationTest {
                     'SYNTHETIC STORE', NULL, 0.6, 1, 1, NULL, 6000, 6000
                 )""".trimIndent(),
             )
+            connection.execute(
+                """INSERT INTO transactions VALUES (
+                    'row-2', 'ANDROID_SMS', 'provider-2', 'fingerprint-2', 7000,
+                    5000, 'INR', 'DEBIT', 'PURCHASE', 'FOOD_AND_DINING', 'TRAVEL',
+                    'SYNTHETIC STORE', NULL, 0.6, 1, 1, 0, 7000, 7000
+                )""".trimIndent(),
+            )
             connection.execute("PRAGMA user_version = 1")
         }
 
@@ -45,7 +53,20 @@ class SpendTrackerDatabaseMigrationTest {
         assertEquals(8, state.progress.recognizedTransactions)
         assertEquals(0, state.progress.rejectedMessages)
         assertFalse(repository.wasSmsPermissionRequested())
-        assertTrue(migrated.transactionDao().findById("row-1")?.reviewReasons.orEmpty().isEmpty())
+        val migratedRow = migrated.transactionDao().findById("row-1")!!
+        assertTrue(migratedRow.reviewReasons.isEmpty())
+        // Version-4 collapse: category keeps its detected value, inclusion folds
+        // from the effective override, and the override columns are gone.
+        assertEquals("OTHER", migratedRow.category)
+        assertTrue(migratedRow.includedInSpend)
+        assertFalse(migratedRow.userEdited)
+
+        // A row with pre-single-value overrides keeps its inclusion and is
+        // marked user-edited so re-imports cannot refresh it.
+        val editedRow = migrated.transactionDao().findById("row-2")!!
+        assertEquals("TRAVEL", editedRow.category)
+        assertFalse(editedRow.includedInSpend)
+        assertTrue(editedRow.userEdited)
         migrated.close()
         file.delete()
     }

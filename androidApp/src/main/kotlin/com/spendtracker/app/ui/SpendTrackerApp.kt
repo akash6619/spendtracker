@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spendtracker.app.R
+import com.spendtracker.app.ui.dashboard.DashboardActions
 import com.spendtracker.app.ui.dashboard.DashboardScreen
 import com.spendtracker.app.ui.onboarding.OnboardingScreen
 import com.spendtracker.app.ui.settings.SettingsScreen
@@ -67,6 +68,14 @@ fun SpendTrackerApp(
             close = viewModel::onTransactionClosed,
             save = viewModel::onSaveTransaction,
             retry = viewModel::onRetryTransactions,
+            viewSource = viewModel::onViewSourceMessage,
+            dismissSource = viewModel::onDismissSourceMessage,
+        ),
+        dashboardActions = DashboardActions(
+            onPeriodSelected = viewModel::onDashboardPeriodSelected,
+            onCategorySelected = viewModel::onDashboardCategorySelected,
+            onExcludedSelected = viewModel::onDashboardExcludedSelected,
+            onForeignSelected = viewModel::onDashboardForeignSelected,
         ),
     )
 }
@@ -82,6 +91,7 @@ fun SpendTrackerAppContent(
     onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
     transactionActions: TransactionActions = TransactionActions(),
+    dashboardActions: DashboardActions = DashboardActions(),
 ) {
     when (state.stage) {
         AppStage.INITIALIZING -> Box(
@@ -109,6 +119,7 @@ fun SpendTrackerAppContent(
             onLeaveDemoData = onLeaveDemoData,
             onDestinationSelected = onDestinationSelected,
             transactionActions = transactionActions,
+            dashboardActions = dashboardActions,
         )
     }
 }
@@ -123,6 +134,7 @@ private fun MainAppScaffold(
     onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
     transactionActions: TransactionActions,
+    dashboardActions: DashboardActions,
 ) {
     Scaffold(
         bottomBar = {
@@ -150,6 +162,7 @@ private fun MainAppScaffold(
             TopLevelDestination.DASHBOARD -> DashboardScreen(
                 state = state.dashboard,
                 modifier = Modifier.padding(padding),
+                actions = dashboardActions,
             )
 
             TopLevelDestination.TRANSACTIONS -> TransactionsScreen(

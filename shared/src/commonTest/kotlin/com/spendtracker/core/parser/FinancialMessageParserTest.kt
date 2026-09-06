@@ -46,7 +46,7 @@ class FinancialMessageParserTest {
             val parsed = outcome.transactionOrNull()
             assertTrue(parsed != null, case.body)
             assertEquals(case.kind, parsed.kind, case.body)
-            assertEquals(case.included, parsed.isIncludedInSpend, case.body)
+            assertEquals(case.included, parsed.includedInSpend, case.body)
             assertEquals(3, parsed.parserVersion)
         }
     }
@@ -108,18 +108,39 @@ class FinancialMessageParserTest {
         )
         assertTrue(TransactionReviewReason.CONFLICTING_AMOUNTS in amountConflict.reasons)
         assertTrue(TransactionReviewReason.CONFLICTING_DIRECTIONS in amountConflict.reasons)
-        assertFalse(amountConflict.transaction.isIncludedInSpend)
+        assertFalse(amountConflict.transaction.includedInSpend)
 
         val missingMerchant = assertIs<ParseOutcome.NeedsReview>(
             parser.classify(message("INR 500 purchase completed")),
         )
+        // A missing merchant is deliberately not a review concern (see needsReview).
         assertEquals(
             setOf(
-                TransactionReviewReason.MISSING_MERCHANT,
                 TransactionReviewReason.UNKNOWN_CATEGORY,
             ),
             missingMerchant.reasons,
         )
+    }
+
+    @Test
+    fun onKeywordExtractsMerchantAndMissingMerchantIsAccepted() {
+        val parsed = parser.classify(
+            message("INR 500 spent on SWIGGY ref 123456"),
+        ).transactionOrNull()
+        assertEquals("SWIGGY", parsed?.merchant)
+        assertTrue(parsed?.reviewReasons?.none { it == TransactionReviewReason.MISSING_MERCHANT } == true)
+        assertTrue(parsed?.confidence == 0.90)
+
+        // "on" followed by a date or possessive must not invent a merchant.
+        val dated = parser.classify(
+            message("INR 500 debited on 15-09-26 at NORTHSTAR"),
+        ).transactionOrNull()
+        assertEquals("NORTHSTAR", dated?.merchant)
+
+        val possessive = parser.classify(
+            message("INR 500 debited on your card at NORTHSTAR"),
+        ).transactionOrNull()
+        assertEquals("NORTHSTAR", possessive?.merchant)
     }
 
     @Test

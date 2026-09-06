@@ -10,7 +10,7 @@ import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.Money
-import com.spendtracker.core.model.ParsedTransaction
+import com.spendtracker.core.model.ReviewPolicy
 import com.spendtracker.core.model.SourceType
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
@@ -56,12 +56,27 @@ class RoomTransactionRepository(
 
     override suspend fun getById(id: String): LedgerTransaction? = dao.findById(id)?.toDomain()
 
-    override suspend fun updateOverrides(
+    override suspend fun updateTransaction(
         id: String,
-        category: SpendCategory?,
-        includedInSpend: Boolean?,
+        category: SpendCategory,
+        includedInSpend: Boolean,
     ) {
-        dao.updateOverrides(id, category?.name, includedInSpend, nowEpochMillis())
+        val current = dao.findById(id) ?: return
+        val storedReasons = current.reviewReasons.takeIf(String::isNotBlank)
+            ?.split(',')
+            ?.mapTo(linkedSetOf(), TransactionReviewReason::valueOf)
+            ?: emptySet()
+        // An explicit category resolves only the category concern; other stored
+        // reasons stay untouched, and confidence follows the surviving set.
+        val resolvedReasons = storedReasons - TransactionReviewReason.UNKNOWN_CATEGORY
+        dao.updateTransaction(
+            id = id,
+            category = category.name,
+            included = includedInSpend,
+            reviewReasons = resolvedReasons.sorted().joinToString(","),
+            confidence = ReviewPolicy.confidenceFor(resolvedReasons),
+            updatedAt = nowEpochMillis(),
+        )
     }
 
     override fun observeMerchantRules(): Flow<List<MerchantCategoryRule>> =
@@ -103,15 +118,13 @@ private fun TransactionCandidate.toEntity(now: Long): TransactionEntity = Transa
     currency = transaction.money.currency.name,
     direction = transaction.direction.name,
     kind = transaction.kind.name,
-    detectedCategory = transaction.category.name,
-    userCategory = null,
+    category = transaction.category.name,
     merchant = transaction.merchant,
     accountHint = transaction.accountHint,
     confidence = transaction.confidence,
     parserVersion = transaction.parserVersion,
     reviewReasons = transaction.reviewReasons.map(TransactionReviewReason::name).sorted().joinToString(","),
-    detectedIncludedInSpend = transaction.detectedIncludedInSpend,
-    userIncludedInSpend = null,
+    includedInSpend = transaction.includedInSpend,
     createdAtEpochMillis = now,
     updatedAtEpochMillis = now,
 )
@@ -126,23 +139,19 @@ private fun TransactionEntity.toDomain(): LedgerTransaction = LedgerTransaction(
     sourceType = SourceType.valueOf(sourceType),
     sourceProviderId = sourceProviderId,
     sourceFingerprint = sourceFingerprint,
-    transaction = ParsedTransaction(
-        sourceId = sourceProviderId,
-        sourceReceivedAtEpochMillis = sourceReceivedAtEpochMillis,
-        money = Money(amountMinor, CurrencyCode.valueOf(currency)),
-        direction = TransactionDirection.valueOf(direction),
-        kind = TransactionKind.valueOf(kind),
-        category = SpendCategory.valueOf(detectedCategory),
-        merchant = merchant,
-        accountHint = accountHint,
-        confidence = confidence,
-        parserVersion = parserVersion,
-        reviewReasons = reviewReasons.takeIf(String::isNotBlank)
-            ?.split(',')
-            ?.mapTo(linkedSetOf(), TransactionReviewReason::valueOf)
-            ?: emptySet(),
-        detectedIncludedInSpend = detectedIncludedInSpend,
-    ),
-    userCategory = userCategory?.let(SpendCategory::valueOf),
-    userIncludedInSpend = userIncludedInSpend,
+    sourceReceivedAtEpochMillis = sourceReceivedAtEpochMillis,
+    money = Money(amountMinor, CurrencyCode.valueOf(currency)),
+    direction = TransactionDirection.valueOf(direction),
+    kind = TransactionKind.valueOf(kind),
+    category = SpendCategory.valueOf(category),
+    merchant = merchant,
+    accountHint = accountHint,
+    confidence = confidence,
+    parserVersion = parserVersion,
+    reviewReasons = reviewReasons.takeIf(String::isNotBlank)
+        ?.split(',')
+        ?.mapTo(linkedSetOf(), TransactionReviewReason::valueOf)
+        ?: emptySet(),
+    includedInSpend = includedInSpend,
+    userEdited = userEdited,
 )

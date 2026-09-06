@@ -1,6 +1,10 @@
 package com.spendtracker.app.ui
 
 import com.spendtracker.app.data.InMemoryTransactionRepository
+import com.spendtracker.app.data.SourceLookupResult
+import com.spendtracker.app.data.SourceMessageLookup
+import com.spendtracker.app.data.SourceUnavailableReason
+import com.spendtracker.core.aggregation.DashboardPeriod
 import com.spendtracker.core.importing.ImportFailureCode
 import com.spendtracker.core.importing.ImportMode
 import com.spendtracker.core.importing.ImportProgress
@@ -16,6 +20,8 @@ import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
 import com.spendtracker.core.model.TransactionFilter
+import com.spendtracker.core.model.TransactionReviewReason
+import com.spendtracker.core.model.needsReview
 import com.spendtracker.core.repository.TransactionRepository
 import com.spendtracker.core.repository.ImportStateRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,24 +29,33 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.TimeZone
 import org.junit.Rule
 import org.junit.Test
+import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 /**
  * Verifies top-level UI orchestration without Android framework dependencies.
  * Fake repositories and import runners make permission, retry, restoration,
- * reconciliation, and demo-mode transitions deterministic.
+ * reconciliation, demo-mode, dashboard aggregation, and deep-link transitions
+ * deterministic. Dashboard tests inject a fixed clock and UTC zone so calendar
+ * windows never depend on the host machine's time zone.
  */
 class AppViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
+    // Wednesday 2026-09-09, inside the UTC week starting Monday 2026-09-07.
+    private val fixedNow: Long = Instant.parse("2026-09-09T12:00:00Z").toEpochMilli()
+
     @Test
-    fun editsUpdateFilteredListAndDashboardWithoutClosingDetailAndCanReset() = runTest {
+    fun editsUpdateFilteredListAndDashboardWithoutClosingDetailAndCanSaveAgain() = runTest {
         val repository = InMemoryTransactionRepository(listOf(transaction("edit")))
         val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, false)
         advanceUntilIdle()
@@ -50,13 +65,13 @@ class AppViewModelTest {
         vm.onSaveTransaction(SpendCategory.TRAVEL, false)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.transactions.transactions.isEmpty())
-        assertEquals(SpendCategory.TRAVEL, vm.uiState.value.transactions.selected?.effectiveCategory)
-        assertEquals(0, vm.uiState.value.dashboard.inrSpendMinor)
+        assertEquals(SpendCategory.TRAVEL, vm.uiState.value.transactions.selected?.category)
+        assertEquals(0, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
         assertTrue(vm.uiState.value.transactions.saveSucceeded)
-        vm.onSaveTransaction(null, null)
+        vm.onSaveTransaction(SpendCategory.FOOD_AND_DINING, true)
         advanceUntilIdle()
         assertEquals(1, vm.uiState.value.transactions.transactions.size)
-        assertEquals(685_00, vm.uiState.value.dashboard.inrSpendMinor)
+        assertEquals(685_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
         vm.onTransactionClosed()
         assertEquals(null, vm.uiState.value.transactions.selected)
     }
@@ -66,23 +81,23 @@ class AppViewModelTest {
         val backing = InMemoryTransactionRepository(listOf(transaction("edit")))
         var fail = true
         val repository = object : TransactionRepository by backing {
-            override suspend fun updateOverrides(id: String, category: SpendCategory?, includedInSpend: Boolean?) {
+            override suspend fun updateTransaction(id: String, category: SpendCategory, includedInSpend: Boolean) {
                 if (fail) error("synthetic failure")
-                backing.updateOverrides(id, category, includedInSpend)
+                backing.updateTransaction(id, category, includedInSpend)
             }
         }
-        val vm = AppViewModel(repository, FakeImportStateRepository(), null, ImportRunner { _, _ -> ImportState() }, false)
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, false)
         advanceUntilIdle()
         vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
         vm.onSaveTransaction(SpendCategory.TRAVEL, false)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.transactions.saveFailed)
-        assertEquals(685_00, vm.uiState.value.dashboard.inrSpendMinor)
+        assertEquals(685_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
         fail = false
         vm.onSaveTransaction(SpendCategory.TRAVEL, false)
         advanceUntilIdle()
         assertFalse(vm.uiState.value.transactions.saveFailed)
-        assertEquals(0, vm.uiState.value.dashboard.inrSpendMinor)
+        assertEquals(0, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
     }
 
     @Test
@@ -92,7 +107,7 @@ class AppViewModelTest {
         val repository = object : TransactionRepository by backing {
             override fun observeTransactions() = if (fail) kotlinx.coroutines.flow.flow { error("synthetic") } else backing.observeTransactions()
         }
-        val vm = AppViewModel(repository, FakeImportStateRepository(), null, ImportRunner { _, _ -> ImportState() }, false)
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, false)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.transactions.loadFailed)
         fail = false
@@ -120,7 +135,7 @@ class AppViewModelTest {
             ImportState(
                 status = ImportRunStatus.COMPLETED,
                 initialImportComplete = true,
-                lastSuccessfulScanEpochMillis = 1_788_457_600_000,
+                lastSuccessfulScanEpochMillis = fixedNow,
                 progress = progress,
             ).also { stateRepository.saveImportState(it) }
         }
@@ -140,7 +155,7 @@ class AppViewModelTest {
         assertEquals(AppStage.MAIN, state.stage)
         assertEquals(12, state.scanSummary?.scannedMessages)
         assertEquals(1, state.scanSummary?.savedTransactions)
-        assertEquals(685_00, state.dashboard.inrSpendMinor)
+        assertEquals(685_00, state.dashboard.report?.includedInrTotalMinor)
         assertEquals(listOf(ImportMode.INITIAL), requestedModes)
         assertFalse(state.isScanning)
     }
@@ -283,6 +298,8 @@ class AppViewModelTest {
             demoRepository = InMemoryTransactionRepository(listOf(demoTransaction)),
             importRunner = ImportRunner { _, _ -> ImportState() },
             initialPermissionGranted = false,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
         )
         advanceUntilIdle()
 
@@ -291,7 +308,7 @@ class AppViewModelTest {
         viewModel.onDestinationSelected(TopLevelDestination.TRANSACTIONS)
 
         assertTrue(viewModel.uiState.value.usingDemoData)
-        assertEquals(listOf(demoTransaction.transaction), viewModel.uiState.value.transactions.transactions.map { it.transaction })
+        assertEquals(listOf(demoTransaction.sourceFingerprint), viewModel.uiState.value.transactions.transactions.map { it.sourceFingerprint })
 
         viewModel.onLeaveDemoData()
         advanceUntilIdle()
@@ -299,8 +316,308 @@ class AppViewModelTest {
         assertFalse(viewModel.uiState.value.usingDemoData)
     }
 
+    @Test
+    fun dashboardComputesCurrentWeekTotalsAndCounts() = runTest {
+        val repository = InMemoryTransactionRepository(
+            listOf(
+                transaction("in-week", timestamp = "2026-09-08T08:00:00Z"),
+                transaction("in-week-2", timestamp = "2026-09-10T08:00:00Z", amountMinor = 315_00),
+                transaction(
+                    "foreign", timestamp = "2026-09-09T09:00:00Z",
+                    money = Money(900, CurrencyCode.USD),
+                ),
+                transaction("last-week", timestamp = "2026-09-02T08:00:00Z", amountMinor = 999_00),
+            ),
+        )
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        val dashboard = vm.uiState.value.dashboard
+        assertEquals(1_000_00, dashboard.report?.includedInrTotalMinor)
+        assertEquals(2, dashboard.report?.includedInrCount)
+        assertEquals(1, dashboard.report?.foreignCount)
+        assertEquals(DashboardPeriod.WEEK, dashboard.period)
+    }
+
+    @Test
+    fun dashboardPeriodSwitchRecomputesMonthWindow() = runTest {
+        val repository = InMemoryTransactionRepository(
+            listOf(
+                transaction("this-week", timestamp = "2026-09-08T08:00:00Z"),
+                transaction("month-early", timestamp = "2026-09-01T08:00:00Z", amountMinor = 315_00),
+            ),
+        )
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        // The week window (7-13 Sep) excludes the 1 Sep record.
+        assertEquals(685_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
+
+        vm.onDashboardPeriodSelected(DashboardPeriod.MONTH)
+        assertEquals(DashboardPeriod.MONTH, vm.uiState.value.dashboard.period)
+        assertEquals(1_000_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
+        // The comparison object exists even with an empty previous baseline.
+        assertNotNull(vm.uiState.value.dashboard.comparison)
+        assertNull(vm.uiState.value.dashboard.comparison?.deltaPercent)
+    }
+
+    @Test
+    fun dashboardComparisonPercentageUsesPreviousSameElapsedDays() = runTest {
+        val repository = InMemoryTransactionRepository(
+            listOf(
+                transaction("current", timestamp = "2026-09-08T08:00:00Z"),
+                transaction("previous-monday", timestamp = "2026-08-31T08:00:00Z", amountMinor = 325_00),
+            ),
+        )
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        // Same elapsed days through Wednesday: 685 vs 325 → +110.77%, rounded to +111.
+        assertEquals(111, vm.uiState.value.dashboard.comparison?.deltaPercent)
+        assertEquals(360_00, vm.uiState.value.dashboard.comparison?.deltaMinor)
+    }
+
+    @Test
+    fun categoryDeepLinkOpensTransactionsWithPeriodFilter() = runTest {
+        val repository = InMemoryTransactionRepository(listOf(transaction("deep")))
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        vm.onDashboardCategorySelected(SpendCategory.FOOD_AND_DINING)
+        val state = vm.uiState.value
+        assertEquals(TopLevelDestination.TRANSACTIONS, state.selectedDestination)
+        val filter = state.transactions.filter
+        assertEquals(SpendCategory.FOOD_AND_DINING, filter.category)
+        val range = state.dashboard.report!!.range
+        assertEquals(range.startInclusiveEpochMillis, filter.fromInclusive)
+        assertEquals(range.endExclusiveEpochMillis, filter.toExclusive)
+        assertEquals(listOf("deep"), state.transactions.transactions.map { it.sourceProviderId })
+    }
+
+    @Test
+    fun excludedForeignAndReviewDeepLinksSetMatchingFilters() = runTest {
+        val repository = InMemoryTransactionRepository(
+            listOf(
+                transaction("plain"),
+                transaction(
+                    "foreign", timestamp = "2026-09-09T09:00:00Z",
+                    money = Money(900, CurrencyCode.USD),
+                ),
+            ),
+        )
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        vm.onDashboardExcludedSelected()
+        assertEquals(false, vm.uiState.value.transactions.filter.included)
+        assertEquals(TopLevelDestination.TRANSACTIONS, vm.uiState.value.selectedDestination)
+
+        vm.onDashboardForeignSelected()
+        assertTrue(vm.uiState.value.transactions.filter.foreignOnly)
+        assertEquals(1, vm.uiState.value.transactions.transactions.size)
+    }
+
+    @Test
+    fun timeZoneChangeRecomputesRangesOnResumeWithoutDataLoss() = runTest {
+        val repository = InMemoryTransactionRepository(listOf(transaction("tz")))
+        var zone: TimeZone = TimeZone.UTC
+        val vm = AppViewModel(
+            primaryRepository = repository,
+            importStateRepository = FakeImportStateRepository(
+                ImportState(status = ImportRunStatus.COMPLETED, initialImportComplete = true),
+            ),
+            demoRepository = null,
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = false,
+            nowEpochMillis = { fixedNow },
+            timeZone = { zone },
+        )
+        advanceUntilIdle()
+        val utcStart = vm.uiState.value.dashboard.report!!.range.startInclusiveEpochMillis
+        assertEquals(1, vm.uiState.value.dashboard.report!!.includedInrCount)
+
+        zone = TimeZone.of("Asia/Kolkata")
+        vm.onAppResumed(granted = false, shouldShowRationale = false)
+        advanceUntilIdle()
+
+        val kolkataStart = vm.uiState.value.dashboard.report!!.range.startInclusiveEpochMillis
+        assertEquals(kolkataStart + 5 * 3_600_000L + 30 * 60_000L, utcStart)
+        // The stored transaction still contributes; only the window moved.
+        assertEquals(1, vm.uiState.value.dashboard.report!!.includedInrCount)
+    }
+
+    @Test
+    fun sourceViewShowsFoundMessageAndClearsOnDismiss() = runTest {
+        val lookupCalls = mutableListOf<String>()
+        val vm = AppViewModel(
+            primaryRepository = InMemoryTransactionRepository(listOf(transaction("source"))),
+            importStateRepository = FakeImportStateRepository(),
+            demoRepository = null,
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            sourceMessageLookup = SourceMessageLookup { row ->
+                lookupCalls += row.id
+                SourceLookupResult.Found("SYNTHETIC SENDER", "SYNTHETIC MESSAGE BODY", fixedNow)
+            },
+        )
+        advanceUntilIdle()
+        vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
+        vm.onViewSourceMessage()
+        advanceUntilIdle()
+
+        val source = vm.uiState.value.transactions.sourceView
+        assertTrue(source is SourceViewUiState.Found)
+        assertEquals("SYNTHETIC MESSAGE BODY", (source as SourceViewUiState.Found).body)
+        assertEquals(listOf("ANDROID_SMS:source"), lookupCalls)
+
+        vm.onDismissSourceMessage()
+        assertNull(vm.uiState.value.transactions.sourceView)
+    }
+
+    @Test
+    fun sourceViewWithoutPermissionExplainsRevocationWithoutLookup() = runTest {
+        var lookupCalls = 0
+        val vm = AppViewModel(
+            primaryRepository = InMemoryTransactionRepository(listOf(transaction("source"))),
+            importStateRepository = FakeImportStateRepository(),
+            demoRepository = null,
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = false,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            sourceMessageLookup = SourceMessageLookup { _ -> lookupCalls += 1; SourceLookupResult.Unavailable(SourceUnavailableReason.LOOKUP_FAILED) },
+        )
+        advanceUntilIdle()
+        vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
+        vm.onViewSourceMessage()
+
+        assertEquals(
+            SourceViewUiState.Unavailable(SourceUnavailableReason.PERMISSION_REVOKED),
+            vm.uiState.value.transactions.sourceView,
+        )
+        assertEquals(0, lookupCalls)
+    }
+
+    @Test
+    fun sourceViewClearsWhenDetailClosesOrSelectionChanges() = runTest {
+        val vm = AppViewModel(
+            primaryRepository = InMemoryTransactionRepository(listOf(transaction("source"))),
+            importStateRepository = FakeImportStateRepository(),
+            demoRepository = null,
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            sourceMessageLookup = SourceMessageLookup { _ -> SourceLookupResult.Found("S", "SYNTHETIC BODY", fixedNow) },
+        )
+        advanceUntilIdle()
+        val id = vm.uiState.value.transactions.transactions.single().id
+        vm.onTransactionSelected(id)
+        vm.onViewSourceMessage()
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.transactions.sourceView)
+
+        vm.onTransactionSelected(id)
+        assertNull(vm.uiState.value.transactions.sourceView)
+
+        vm.onViewSourceMessage()
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.transactions.sourceView)
+        vm.onTransactionClosed()
+        assertNull(vm.uiState.value.transactions.selected)
+        assertNull(vm.uiState.value.transactions.sourceView)
+    }
+
+    @Test
+    fun savingCategoryResolvesOnlyTheCategoryReviewConcern() = runTest {
+        val uncertain = transaction("review").copy(
+            transaction = transaction("review").transaction.copy(
+                category = SpendCategory.OTHER,
+                reviewReasons = setOf(TransactionReviewReason.UNKNOWN_CATEGORY),
+                confidence = 0.60,
+            ),
+        )
+        val vm = viewModel(
+            InMemoryTransactionRepository(listOf(uncertain)),
+            FakeImportStateRepository(),
+            ImportRunner { _, _ -> ImportState() },
+            true,
+        )
+        advanceUntilIdle()
+        val row = vm.uiState.value.transactions.transactions.single()
+        assertTrue(row.needsReview)
+
+        vm.onTransactionSelected(row.id)
+        vm.onSaveTransaction(SpendCategory.SHOPPING, true)
+        advanceUntilIdle()
+
+        val saved = vm.uiState.value.transactions.selected!!
+        assertFalse(saved.needsReview)
+        assertEquals(0.90, saved.confidence)
+        assertTrue(saved.reviewReasons.isEmpty())
+        assertEquals(SpendCategory.SHOPPING, saved.category)
+    }
+
+    @Test
+    fun saveKeepsUnresolvedAmountConflictsInReview() = runTest {
+        val conflicting = transaction("conflict").copy(
+            transaction = transaction("conflict").transaction.copy(
+                reviewReasons = setOf(TransactionReviewReason.CONFLICTING_AMOUNTS),
+                confidence = 0.35,
+            ),
+        )
+        val vm = viewModel(
+            InMemoryTransactionRepository(listOf(conflicting)),
+            FakeImportStateRepository(),
+            ImportRunner { _, _ -> ImportState() },
+            true,
+        )
+        advanceUntilIdle()
+        vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
+        vm.onSaveTransaction(SpendCategory.SHOPPING, true)
+        advanceUntilIdle()
+
+        val saved = vm.uiState.value.transactions.selected!!
+        assertTrue(saved.needsReview)
+        assertTrue(TransactionReviewReason.CONFLICTING_AMOUNTS in saved.reviewReasons)
+        assertEquals(0.35, saved.confidence)
+    }
+
+    @Test
+    fun secondSaveKeepsAlreadyResolvedReviewState() = runTest {
+        val uncertain = transaction("reset").copy(
+            transaction = transaction("reset").transaction.copy(
+                category = SpendCategory.OTHER,
+                reviewReasons = setOf(TransactionReviewReason.UNKNOWN_CATEGORY),
+                confidence = 0.60,
+            ),
+        )
+        val vm = viewModel(
+            InMemoryTransactionRepository(listOf(uncertain)),
+            FakeImportStateRepository(),
+            ImportRunner { _, _ -> ImportState() },
+            true,
+        )
+        advanceUntilIdle()
+        vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
+        vm.onSaveTransaction(SpendCategory.SHOPPING, true)
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.transactions.selected!!.needsReview)
+
+        vm.onSaveTransaction(SpendCategory.GROCERIES, false)
+        advanceUntilIdle()
+        val saved = vm.uiState.value.transactions.selected!!
+        assertFalse(saved.needsReview)
+        assertTrue(saved.reviewReasons.isEmpty())
+        assertEquals(0.90, saved.confidence)
+        assertEquals(SpendCategory.GROCERIES, saved.category)
+        assertFalse(saved.includedInSpend)
+    }
+
     private fun viewModel(
-        repository: InMemoryTransactionRepository,
+        repository: TransactionRepository,
         stateRepository: FakeImportStateRepository,
         runner: ImportRunner,
         permissionGranted: Boolean,
@@ -310,16 +627,23 @@ class AppViewModelTest {
         demoRepository = null,
         importRunner = runner,
         initialPermissionGranted = permissionGranted,
+        nowEpochMillis = { fixedNow },
+        timeZone = { TimeZone.UTC },
     )
 
-    private fun transaction(sourceId: String) = TransactionCandidate(
+    private fun transaction(
+        sourceId: String,
+        timestamp: String = "2026-09-09T08:00:00Z",
+        amountMinor: Long = 685_00,
+        money: Money? = null,
+    ) = TransactionCandidate(
         sourceType = SourceType.ANDROID_SMS,
         sourceProviderId = sourceId,
         sourceFingerprint = sourceId,
         transaction = ParsedTransaction(
             sourceId = sourceId,
-            sourceReceivedAtEpochMillis = 1_788_457_600_000,
-            money = Money(685_00, CurrencyCode.INR),
+            sourceReceivedAtEpochMillis = Instant.parse(timestamp).toEpochMilli(),
+            money = money ?: Money(amountMinor, CurrencyCode.INR),
             direction = TransactionDirection.DEBIT,
             kind = TransactionKind.PURCHASE,
             category = SpendCategory.FOOD_AND_DINING,

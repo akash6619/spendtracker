@@ -38,8 +38,26 @@ interface TransactionDao {
     @Query("UPDATE transactions SET sourceProviderId = NULL, updatedAtEpochMillis = :updatedAt WHERE id = :id")
     suspend fun clearProviderId(id: String, updatedAt: Long)
 
-    @Query("UPDATE transactions SET userCategory = :category, userIncludedInSpend = :included, updatedAtEpochMillis = :updatedAt WHERE id = :id")
-    suspend fun updateOverrides(id: String, category: String?, included: Boolean?, updatedAt: Long)
+    // A user edit stores the chosen values and freezes the row against import
+    // refreshes; an explicit category resolves only the category review concern.
+    @Query("""
+        UPDATE transactions
+        SET category = :category,
+            includedInSpend = :included,
+            reviewReasons = :reviewReasons,
+            confidence = :confidence,
+            userEdited = 1,
+            updatedAtEpochMillis = :updatedAt
+        WHERE id = :id
+    """)
+    suspend fun updateTransaction(
+        id: String,
+        category: String,
+        included: Boolean,
+        reviewReasons: String,
+        confidence: Double,
+        updatedAt: Long,
+    )
 
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
@@ -54,25 +72,25 @@ interface TransactionDao {
         SELECT COALESCE(SUM(amountMinor), 0) AS totalMinor, COUNT(*) AS transactionCount
         FROM transactions
         WHERE currency = 'INR'
-          AND COALESCE(userIncludedInSpend, detectedIncludedInSpend) = 1
+          AND includedInSpend = 1
           AND sourceReceivedAtEpochMillis >= :fromInclusive
           AND sourceReceivedAtEpochMillis < :toExclusive
     """)
     suspend fun periodTotal(fromInclusive: Long, toExclusive: Long): PeriodTotal
 
-    @Query("SELECT * FROM transactions WHERE reviewReasons != '' OR confidence < :threshold OR kind = 'UNKNOWN' ORDER BY sourceReceivedAtEpochMillis DESC")
+    @Query("SELECT * FROM transactions WHERE reviewReasons != '' OR confidence < :threshold ORDER BY sourceReceivedAtEpochMillis DESC")
     suspend fun needingReview(threshold: Double): List<TransactionEntity>
 
     @Query("""
-        SELECT COALESCE(userCategory, detectedCategory) AS category,
+        SELECT category,
                SUM(amountMinor) AS totalMinor,
                COUNT(*) AS transactionCount
         FROM transactions
         WHERE currency = 'INR'
-          AND COALESCE(userIncludedInSpend, detectedIncludedInSpend) = 1
+          AND includedInSpend = 1
           AND sourceReceivedAtEpochMillis >= :fromInclusive
           AND sourceReceivedAtEpochMillis < :toExclusive
-        GROUP BY COALESCE(userCategory, detectedCategory)
+        GROUP BY category
         ORDER BY totalMinor DESC
     """)
     suspend fun categoryTotals(fromInclusive: Long, toExclusive: Long): List<CategoryTotal>
@@ -83,7 +101,10 @@ interface TransactionDao {
             // Fingerprint is authoritative because Android may reuse provider row IDs.
             val fingerprintMatch = findByFingerprint(candidate.sourceType, candidate.sourceFingerprint)
             if (fingerprintMatch != null) {
-                // Free a reused provider ID before attaching it to the fingerprint match.
+                // User-edited rows are frozen: imports never touch them. Untouched
+                // rows may be refreshed so an improved parser can re-derive fields.
+                if (fingerprintMatch.userEdited) return@forEach
+                // Free a reused provider ID before attaching it to the match.
                 candidate.sourceProviderId?.let { providerId ->
                     findByProviderId(candidate.sourceType, providerId)
                         ?.takeIf { it.id != fingerprintMatch.id }
@@ -91,20 +112,18 @@ interface TransactionDao {
                 }
                 update(candidate.copy(
                     id = fingerprintMatch.id,
-                    // Re-import detected fields, but never overwrite user corrections.
-                    userCategory = fingerprintMatch.userCategory,
-                    userIncludedInSpend = fingerprintMatch.userIncludedInSpend,
+                    userEdited = false,
                     createdAtEpochMillis = fingerprintMatch.createdAtEpochMillis,
                 ))
-            } else {
-                // A provider-ID collision represents a new fact, not an update.
-                candidate.sourceProviderId?.let { providerId ->
-                    findByProviderId(candidate.sourceType, providerId)?.let { previous ->
-                        clearProviderId(previous.id, candidate.updatedAtEpochMillis)
-                    }
-                }
-                insert(candidate)
+                return@forEach
             }
+            // A provider-ID collision represents a new fact, not an update.
+            candidate.sourceProviderId?.let { providerId ->
+                findByProviderId(candidate.sourceType, providerId)?.let { previous ->
+                    clearProviderId(previous.id, candidate.updatedAtEpochMillis)
+                }
+            }
+            insert(candidate)
         }
     }
 }

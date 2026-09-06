@@ -36,7 +36,7 @@ class InMemoryTransactionRepositoryTest {
             ),
         )
 
-        val transaction = repository.observeTransactions().first().single().transaction
+        val transaction = repository.observeTransactions().first().single()
         assertEquals("THE CORNER CAFE", transaction.merchant)
         assertEquals(SpendCategory.FOOD_AND_DINING, transaction.category)
         assertTrue(transaction.reviewReasons.isEmpty())

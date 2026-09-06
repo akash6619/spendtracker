@@ -33,7 +33,12 @@
 
     <string name="dashboard_title">Dashboard</string>
     <string name="dashboard_subtitle">A private snapshot of recognized spending</string>
-    <string name="detected_spend">Detected INR spend</string>
+    <string name="period_week">Week</string>
+    <string name="period_month">Month</string>
+    <string name="period_week_word">week</string>
+    <string name="period_month_word">month</string>
+    <string name="dashboard_this_week">This week</string>
+    <string name="dashboard_this_month">This month</string>
     <plurals name="included_transaction_count">
         <item quantity="one">%1$d included transaction</item>
         <item quantity="other">%1$d included transactions</item>
@@ -42,10 +47,27 @@
         <item quantity="one">%1$d foreign-currency transaction is outside this total</item>
         <item quantity="other">%1$d foreign-currency transactions are outside this total</item>
     </plurals>
+    <plurals name="excluded_transaction_count">
+        <item quantity="one">%1$d excluded INR transaction</item>
+        <item quantity="other">%1$d excluded INR transactions</item>
+    </plurals>
+    <plurals name="category_transaction_count">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+    <string name="comparison_format">%1$+d%% compared with the same number of days in the previous %2$s</string>
+    <string name="comparison_none">No comparable spend in the previous %1$s</string>
+    <string name="link_category_cd">View %1$s transactions in this period</string>
+    <string name="link_excluded_cd">View excluded transactions in this period</string>
+    <string name="link_foreign_cd">View foreign-currency transactions in this period</string>
+    <string name="category_breakdown_title">Spend by category</string>
+    <string name="category_share">%1$d%%</string>
+    <string name="daily_spend_title">Daily spend</string>
+    <string name="daily_bar_cd">%1$s: %2$s</string>
     <string name="dashboard_empty_title">No recognized spend yet</string>
     <string name="dashboard_empty_body">Run a scan from Settings or use the debug demo to preview this screen.</string>
-    <string name="dashboard_future_title">Period insights</string>
-    <string name="dashboard_future_body">Weekly, monthly, comparison, and category reporting will be added in the dashboard milestone.</string>
+    <string name="dashboard_no_inr_title">No included INR spend in this period</string>
+    <string name="dashboard_no_inr_body">Recognized INR purchases and fees will appear here. Foreign and excluded records stay visible as counts.</string>
 
     <string name="transactions_title">Transactions</string>
     <string name="transactions_subtitle">Recognized records stored privately on this device</string>
@@ -107,12 +129,9 @@
     <string name="filter_to">Through date (YYYY-MM-DD)</string>
     <string name="filter_invalid_date">Enter valid dates with the end on or after the start.</string>
     <string name="field_category">Category</string>
-    <string name="field_inclusion">Spend inclusion</string>
-    <string name="field_review">Review status</string>
+    <string name="field_inclusion">Spend</string>
     <string name="field_currency">Currency</string>
     <string name="filter_included">Included in spend</string>
-    <string name="review_needed">Needs review</string>
-    <string name="review_clear">No review flags</string>
     <string name="filters_active">Filters are active</string>
     <string name="clear_filters">Clear filters</string>
     <string name="filter_empty_title">No matching transactions</string>
@@ -124,25 +143,22 @@
     <string name="action_save">Save changes</string>
     <string name="action_saving">Saving…</string>
     <string name="action_back_transactions">Back to transactions</string>
-    <string name="action_reset_overrides">Reset to detected defaults</string>
-    <string name="use_detected">Use detected default</string>
     <string name="edit_failed">Changes could not be saved. Please try again.</string>
     <string name="edit_saved">Changes saved</string>
     <string name="detail_kind">%1$s · %2$s</string>
-    <string name="detail_detected_category">Detected category: %1$s</string>
     <string name="detail_account">Account ending ••••%1$s</string>
     <string name="detail_confidence">Detection confidence: %1$d%%</string>
-    <string name="detail_review_note">Review flags describe the original detection. Category and inclusion edits do not confirm ambiguous amounts or other parsed fields.</string>
-    <string name="source_not_enabled">Original message viewing is not available in this version. Message bodies are not stored by SpendTracker.</string>
+    <string name="action_view_source">View source message</string>
+    <string name="source_dialog_title">Original message</string>
+    <string name="source_loading">Reading message…</string>
+    <string name="source_sender">%1$s · %2$s</string>
+    <string name="source_unavailable_permission">SMS permission is required to show the original message. Re-enable it in app settings.</string>
+    <string name="source_unavailable_missing">The original message is no longer available on this device. It may have been deleted or replaced.</string>
+    <string name="source_unavailable_error">The original message could not be read right now.</string>
+    <string name="action_close">Close</string>
+    <string name="source_ephemeral_note">The original message is shown only while this dialog is open. SpendTracker never stores message bodies.</string>
     <string name="foreign_explanation">Not included in INR totals: this transaction keeps its original currency and is not converted.</string>
-    <string name="included_by_user">Included in spend by your override.</string>
-    <string name="excluded_by_user">Excluded from spend by your override.</string>
-    <string name="included_by_default">Included in spend as a detected purchase or fee debit.</string>
+    <string name="included_by_default">Included in spend as a purchase or fee debit.</string>
     <string name="excluded_conflict">Excluded because the message contains conflicting financial details.</string>
     <string name="excluded_by_kind">Excluded by default: credits, refunds, transfers, withdrawals, and unknown events are not ordinary spend.</string>
-    <string name="reason_category">Category could not be determined.</string>
-    <string name="reason_kind">Transaction type could not be determined.</string>
-    <string name="reason_merchant">Merchant could not be determined.</string>
-    <string name="reason_amount">Multiple conflicting amounts were detected.</string>
-    <string name="reason_direction">Conflicting debit and credit wording was detected.</string>
 </resources>

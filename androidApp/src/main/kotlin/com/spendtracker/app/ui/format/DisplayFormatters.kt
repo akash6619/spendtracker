@@ -27,6 +27,25 @@ fun formatDate(epochMillis: Long): String =
         .withZone(ZoneId.systemDefault())
         .format(Instant.ofEpochMilli(epochMillis))
 
+/** Half-open period shown as "start – last day" using the device time zone. */
+fun formatRange(startInclusiveEpochMillis: Long, endExclusiveEpochMillis: Long): String {
+    val zone = ZoneId.systemDefault()
+    val lastDay = Instant.ofEpochMilli(endExclusiveEpochMillis).atZone(zone).toLocalDate().minusDays(1)
+    return formatDate(startInclusiveEpochMillis) + " – " +
+        DateTimeFormatter.ofPattern("d MMM yyyy").withZone(zone).format(lastDay)
+}
+
+/** Day label for one daily-series bar, e.g. "3 Sep 2026". */
+fun dayLabel(epochMillis: Long): String =
+    DateTimeFormatter.ofPattern("d MMM yyyy")
+        .withZone(ZoneId.systemDefault())
+        .format(Instant.ofEpochMilli(epochMillis))
+
+/** Short weekday label for the week chart axis, e.g. "Mon". */
+fun weekdayShortLabel(epochMillis: Long): String =
+    Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault())
+        .dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.getDefault())
+
 @StringRes
 fun SpendCategory.labelResource(): Int = when (this) {
     SpendCategory.FOOD_AND_DINING -> R.string.category_food_and_dining

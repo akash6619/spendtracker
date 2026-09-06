@@ -13,6 +13,7 @@ import com.spendtracker.core.model.TransactionReviewReason
 import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.model.TransactionFilter
 import com.spendtracker.core.model.filteredBy
+import com.spendtracker.core.model.needsReview
 import com.spendtracker.core.parser.FinancialMessageParser
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -38,14 +39,14 @@ class RoomTransactionRepositoryTest {
         firstRepository.upsert(listOf(candidate("7", "same")))
         firstRepository.upsert(listOf(candidate("7", "same")))
         val id = firstRepository.observeTransactions().first().single().id
-        firstRepository.updateOverrides(id, SpendCategory.TRAVEL, false)
+        firstRepository.updateTransaction(id, SpendCategory.TRAVEL, false)
         assertEquals(1, firstRepository.observeTransactions().first().size)
         firstDatabase.close()
 
         val reopened = createSpendTrackerDatabase(file)
         assertEquals(1, reopened.transactionDao().count())
-        assertEquals("TRAVEL", reopened.transactionDao().findById(id)?.userCategory)
-        assertEquals(false, reopened.transactionDao().findById(id)?.userIncludedInSpend)
+        assertEquals("TRAVEL", reopened.transactionDao().findById(id)?.category)
+        assertEquals(false, reopened.transactionDao().findById(id)?.includedInSpend)
         reopened.close()
         file.delete()
     }
@@ -88,38 +89,39 @@ class RoomTransactionRepositoryTest {
     }
 
     @Test
-    fun fingerprintWinsAndUserOverridesSurviveReimport() = runTest {
+    fun fingerprintWinsAndReimportRefreshesUntouchedRowsButSkipsUserEdits() = runTest {
         withRepository { repository, _ ->
             repository.upsert(listOf(candidate("1", "stable")))
             val original = repository.observeTransactions().first().single()
-            repository.updateOverrides(original.id, SpendCategory.TRAVEL, false)
+            repository.updateTransaction(original.id, SpendCategory.TRAVEL, false)
             repository.upsert(listOf(candidate("2", "stable", amountMinor = 999)))
 
+            // User-edited rows are frozen: the re-import cannot touch them.
             val updated = repository.observeTransactions().first().single()
-            assertEquals("2", updated.sourceProviderId)
-            assertEquals(999, updated.transaction.money.amountMinor)
-            assertEquals(SpendCategory.TRAVEL, updated.effectiveCategory)
-            assertFalse(updated.isIncludedInSpend)
+            assertEquals(1, repository.observeTransactions().first().size)
+            assertEquals("1", updated.sourceProviderId)
+            assertEquals(500, updated.money.amountMinor)
+            assertEquals(SpendCategory.TRAVEL, updated.category)
+            assertFalse(updated.includedInSpend)
+            assertTrue(updated.userEdited)
         }
     }
 
     @Test
-    fun parserReparseUpdatesDetectedFieldsAndPreservesExplicitOverrides() = runTest {
+    fun reimportRefreshesUntouchedRowWithImprovedParserValues() = runTest {
         withRepository { repository, _ ->
             val parser = FinancialMessageParser()
             val original = parser.parse(source("INR 5.00 paid at NORTHSTAR CAFE"))!!
             repository.upsert(listOf(candidate("1", "reparse", parsed = original)))
-            val stored = repository.observeTransactions().first().single()
-            repository.updateOverrides(stored.id, SpendCategory.TRAVEL, false)
+            repository.observeTransactions().first().single()
 
             val reparsed = parser.parse(source("INR 9.99 paid at NORTHSTAR CAFE"))!!
             repository.upsert(listOf(candidate("1", "reparse", parsed = reparsed)))
 
             val updated = repository.observeTransactions().first().single()
-            assertEquals(999, updated.transaction.money.amountMinor)
-            assertEquals(3, updated.transaction.parserVersion)
-            assertEquals(SpendCategory.TRAVEL, updated.effectiveCategory)
-            assertFalse(updated.isIncludedInSpend)
+            assertEquals(999, updated.money.amountMinor)
+            assertEquals(3, updated.parserVersion)
+            assertFalse(updated.userEdited)
         }
     }
 
@@ -132,33 +134,29 @@ class RoomTransactionRepositoryTest {
 
             repository.upsert(listOf(candidate("1", "conflict", parsed = parsed)))
 
-            assertFalse(repository.observeTransactions().first().single().isIncludedInSpend)
+            assertFalse(repository.observeTransactions().first().single().includedInSpend)
         }
     }
 
     @Test
-    fun merchantRuleLifecycleRespectsTransactionOverrideAndReportingQueries() = runTest {
+    fun merchantRuleLifecycleAffectsImportAndReportingQueries() = runTest {
         withRepository { repository, database ->
             repository.saveMerchantRule("Northstar Cafe Pvt Ltd", SpendCategory.TRAVEL)
             assertEquals(SpendCategory.TRAVEL, repository.observeMerchantRules().first().single().category)
 
             repository.upsert(listOf(candidate("1", "rule", parsed = parsed("northstar-cafe pvt. ltd"))))
             var transaction = repository.observeTransactions().first().single()
-            assertEquals(SpendCategory.TRAVEL, transaction.effectiveCategory)
+            assertEquals(SpendCategory.TRAVEL, transaction.category)
             assertEquals(SpendCategory.TRAVEL.name, database.transactionDao().categoryTotals(0, 2_000).single().category)
-
-            repository.updateOverrides(transaction.id, SpendCategory.HEALTH, null)
-            repository.upsert(listOf(candidate("1", "rule", parsed = parsed("NORTHSTAR CAFE"))))
-            transaction = repository.observeTransactions().first().single()
-            assertEquals(SpendCategory.HEALTH, transaction.effectiveCategory)
 
             repository.deleteMerchantRule("northstar cafe")
             assertTrue(repository.observeMerchantRules().first().isEmpty())
-            assertEquals(SpendCategory.HEALTH, repository.observeTransactions().first().single().effectiveCategory)
+            // Untouched rows can be refreshed by re-import, so a fresh parse after
+            // rule deletion applies built-in rules again.
+            assertEquals(SpendCategory.TRAVEL, repository.observeTransactions().first().single().category)
 
-            repository.updateOverrides(transaction.id, null, null)
             repository.upsert(listOf(candidate("1", "rule", parsed = parsed("NORTHSTAR CAFE"))))
-            assertEquals(SpendCategory.FOOD_AND_DINING, repository.observeTransactions().first().single().effectiveCategory)
+            assertEquals(SpendCategory.FOOD_AND_DINING, repository.observeTransactions().first().single().category)
         }
     }
 
@@ -183,9 +181,9 @@ class RoomTransactionRepositoryTest {
             )
 
             val rows = repository.observeTransactions().first().associateBy { it.sourceFingerprint }
-            assertEquals(SpendCategory.TRAVEL, rows.getValue("other").effectiveCategory)
-            assertTrue(rows.getValue("other").transaction.reviewReasons.isEmpty())
-            assertEquals(SpendCategory.FEES_AND_CHARGES, rows.getValue("fee").effectiveCategory)
+            assertEquals(SpendCategory.TRAVEL, rows.getValue("other").category)
+            assertTrue(rows.getValue("other").reviewReasons.isEmpty())
+            assertEquals(SpendCategory.FEES_AND_CHARGES, rows.getValue("fee").category)
             assertTrue(database.transactionDao().needingReview(.75).isEmpty())
         }
     }
@@ -199,7 +197,7 @@ class RoomTransactionRepositoryTest {
     }
 
     @Test
-    fun periodCategoryAndReviewQueriesUseEffectiveValues() = runTest {
+    fun periodCategoryAndReviewQueriesUseStoredValues() = runTest {
         withRepository { repository, database ->
             repository.upsert(listOf(
                 candidate("1", "food", timestamp = 1_000, amountMinor = 250),
@@ -207,7 +205,7 @@ class RoomTransactionRepositoryTest {
                 candidate("3", "low", timestamp = 3_000, confidence = .2),
             ))
             val food = repository.observeTransactions().first().first { it.sourceFingerprint == "food" }
-            repository.updateOverrides(food.id, SpendCategory.TRAVEL, true)
+            repository.updateTransaction(food.id, SpendCategory.TRAVEL, true)
 
             assertEquals(2, database.transactionDao().inPeriod(900, 2_000).size)
             assertEquals(250, database.transactionDao().periodTotal(900, 2_000).totalMinor)
@@ -222,7 +220,7 @@ class RoomTransactionRepositoryTest {
     }
 
     @Test
-    fun ledgerFiltersComposeAcrossBoundaryDatesCurrenciesAndEffectiveOverrides() = runTest {
+    fun ledgerFiltersComposeAcrossBoundaryDatesCurrenciesAndStoredValues() = runTest {
         withRepository { repository, database ->
             repository.upsert(listOf(
                 candidate("1", "b", timestamp = 1000, currency = CurrencyCode.JPY, confidence = .6),
@@ -232,15 +230,60 @@ class RoomTransactionRepositoryTest {
                 candidate("5", "usd", timestamp = 1500, currency = CurrencyCode.USD),
             ))
             var rows = repository.observeTransactions().first()
-            rows.filter { it.transaction.money.currency == CurrencyCode.JPY }.forEach {
-                repository.updateOverrides(it.id, SpendCategory.TRAVEL, false)
+            rows.filter { it.money.currency == CurrencyCode.JPY }.forEach {
+                repository.updateTransaction(it.id, SpendCategory.TRAVEL, false)
             }
             rows = repository.observeTransactions().first()
-            val filter = TransactionFilter(1000, 2000, SpendCategory.TRAVEL, false, true, CurrencyCode.JPY)
+            val filter = TransactionFilter(
+                fromInclusive = 1000,
+                toExclusive = 2000,
+                category = SpendCategory.TRAVEL,
+                included = false,
+                needsReview = false,
+                currency = CurrencyCode.JPY,
+            )
             assertEquals(listOf("a", "b"), rows.filteredBy(filter).map { it.sourceFingerprint })
             assertEquals(3, database.transactionDao().inPeriod(1000, 2000).size)
             assertEquals(5, rows.filteredBy(TransactionFilter()).size)
-            assertTrue(rows.filteredBy(filter.copy(needsReview = false)).isEmpty())
+            assertTrue(rows.filteredBy(filter.copy(needsReview = true)).isEmpty())
+        }
+    }
+
+    @Test
+    fun savingCategoryResolvesCategoryConcernButKeepsOtherConcerns() = runTest {
+        withRepository { repository, _ ->
+            repository.upsert(listOf(
+                candidate(
+                    "1", "category-only", parsed = parsed(
+                        merchant = "Other Shop",
+                        category = SpendCategory.OTHER,
+                        reviewReasons = setOf(TransactionReviewReason.UNKNOWN_CATEGORY),
+                        confidence = .60,
+                    ),
+                ),
+                candidate(
+                    "2", "conflict", parsed = parsed(
+                        merchant = "Conflict Shop",
+                        reviewReasons = setOf(TransactionReviewReason.CONFLICTING_AMOUNTS),
+                        confidence = .35,
+                    ),
+                ),
+            ))
+            val categoryOnly = repository.observeTransactions().first()
+                .first { it.sourceFingerprint == "category-only" }
+            repository.updateTransaction(categoryOnly.id, SpendCategory.SHOPPING, true)
+            val resolved = repository.getById(categoryOnly.id)!!
+            assertFalse(resolved.needsReview)
+            assertEquals(0.90, resolved.confidence)
+            assertTrue(resolved.reviewReasons.isEmpty())
+
+            val conflict = repository.observeTransactions().first()
+                .first { it.sourceFingerprint == "conflict" }
+            repository.updateTransaction(conflict.id, SpendCategory.SHOPPING, true)
+            val stillConflict = repository.getById(conflict.id)!!
+            assertTrue(stillConflict.needsReview)
+            assertTrue(TransactionReviewReason.CONFLICTING_AMOUNTS in stillConflict.reviewReasons)
+            assertEquals(0.35, stillConflict.confidence)
         }
     }
 

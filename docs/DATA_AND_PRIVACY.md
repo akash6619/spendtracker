@@ -39,7 +39,10 @@ For an Android SMS-backed transaction, persist:
 - parsed transaction fields only.
 
 The provider row ID allows an explicit `View source message` action to query the
-system SMS provider later and display the body ephemerally. It is not a guarantee:
+system SMS provider later and display the body ephemerally (implemented, D-017).
+The fetched row must reproduce the stored installation-local fingerprint before
+anything is shown, because Android can reuse provider row IDs after deletions.
+It is not a guarantee:
 the user may delete the SMS, revoke permission, replace the messaging database,
 or restore app data onto another device. In those cases the parsed transaction
 still works and the UI says that the source is unavailable.
@@ -81,9 +84,12 @@ Effective category is `userCategory ?: detectedCategory`. Effective inclusion is
 `userIncluded ?: detectedIncluded`. Reparsing may change detected fields but must
 never overwrite user fields.
 
-Uniqueness is enforced on `(sourceType, sourceProviderId)` when a provider ID is
-present and on `(sourceType, sourceFingerprint)` as a fallback. The repository
-must handle history scan and live receiver races transactionally.
+Uniqueness is enforced by Room UNIQUE indexes on `(sourceType, sourceProviderId)`
+when a provider ID is present and on `(sourceType, sourceFingerprint)` as a
+fallback. The repository must handle history scan and live receiver races
+transactionally. Imports are idempotent: a matching source identity refreshes
+only rows the user has not edited, and user-edited rows are never overwritten
+(D-019).
 
 ### Supporting data
 

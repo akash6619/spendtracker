@@ -23,7 +23,7 @@ slice begins.
 | MVP-04 | Detection and parser hardening | Complete | MVP-02 | Supported messages become explainable, well-tested records |
 | MVP-05 | Categorization and override rules | Complete | MVP-04 | Basic buckets are reliable and corrections persist |
 | MVP-06 | Transaction list, filters, and detail/edit | Complete | MVP-03, MVP-05 | Users can inspect and correct the ledger |
-| MVP-07 | Weekly and monthly dashboard | Ready | MVP-05, MVP-06 | Users see reproducible period and category totals |
+| MVP-07 | Weekly and monthly dashboard | Complete | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Planned | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Planned | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Planned | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
@@ -321,7 +321,8 @@ dashboard totals.
       with the parsed ledger observed in memory rather than database paging.
 - [x] Manual 150% font scaling and basic TalkBack focus/navigation checks on API 37.
 
-Optional source lookup remains deferred pending provider/privacy validation.
+Optional source lookup is now implemented as an explicit on-demand dialog
+(D-017); it remains subject to privacy/OEM behavior checks before release.
 Spoken-output quality and API 26/physical-device accessibility remain release checks.
 
 ### Not in this slice
@@ -332,7 +333,7 @@ Transaction splitting, notes, receipt attachments, or manual non-SMS entry.
 
 ## MVP-07 — Weekly and monthly dashboard
 
-**Status:** Ready
+**Status:** Complete
 **Depends on:** MVP-05, MVP-06
 
 ### Goal
@@ -352,22 +353,32 @@ data and exact calendar boundaries.
 
 ### Acceptance criteria
 
-- [ ] Week starts Monday 00:00 and month uses local calendar boundaries.
-- [ ] Current partial-period comparison uses an explicitly tested rule documented
+- [x] Week starts Monday 00:00 and month uses local calendar boundaries.
+- [x] Current partial-period comparison uses an explicitly tested rule documented
       in the UI copy/aggregation tests.
-- [ ] Only effectively included INR records affect headline/category totals.
-- [ ] Category totals sum exactly to the headline total.
-- [ ] Refund/credit/transfer/ATM/foreign defaults and user overrides behave as
+- [x] Only effectively included INR records affect headline/category totals.
+- [x] Category totals sum exactly to the headline total.
+- [x] Refund/credit/transfer/ATM/foreign defaults and user overrides behave as
       specified.
-- [ ] Tapping a category or excluded/review count opens matching transactions.
-- [ ] Time-zone changes recompute ranges deterministically without data loss.
+- [x] Tapping a category or excluded/review count opens matching transactions.
+- [x] Time-zone changes recompute ranges deterministically without data loss.
 
 ### Test gate
 
-- [ ] Shared aggregation tests for day/week/month/year/leap/DST/time-zone edges.
-- [ ] Exact minor-unit and category-sum invariant tests.
-- [ ] ViewModel and Compose tests with a fixed clock and seeded repository.
-- [ ] Screenshot/manual visual checks for empty, small, large, and long-label data.
+- [x] Shared aggregation tests for day/week/month/year/leap/DST/time-zone edges.
+- [x] Exact minor-unit and category-sum invariant tests.
+- [x] ViewModel and Compose tests with a fixed clock and seeded repository.
+- [x] Screenshot/manual visual checks for empty, small, large, and long-label data.
+
+### Notes
+
+- Aggregation is in-memory over the observed parsed ledger via shared
+  `PeriodCalculator`/`ReportAggregator`; Room period queries remain available but
+  are not used by the dashboard.
+- Comparison rule and deep-link filters are recorded as D-016; the transaction
+  filter gained a default-false `foreignOnly` dimension.
+- Manual checks used the debug demo on `SpendTracker_API_37` at default and 150%
+  font scale, plus category-to-transactions deep-link verification.
 
 ### Not in this slice
 

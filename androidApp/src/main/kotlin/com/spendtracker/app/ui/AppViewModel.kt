@@ -3,6 +3,12 @@ package com.spendtracker.app.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.spendtracker.app.data.SourceLookupResult
+import com.spendtracker.app.data.SourceMessageLookup
+import com.spendtracker.app.data.SourceUnavailableReason
+import com.spendtracker.core.aggregation.DashboardPeriod
+import com.spendtracker.core.aggregation.PeriodCalculator
+import com.spendtracker.core.aggregation.ReportAggregator
 import com.spendtracker.core.importing.ImportMode
 import com.spendtracker.core.importing.ImportFailureCode
 import com.spendtracker.core.importing.ImportProgress
@@ -24,13 +30,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import java.time.ZoneId
 
 /**
  * Owns the top-level application state and user-intent orchestration.
  *
  * It tracks permission and navigation, runs scans, writes accepted candidates to
  * the production repository, and derives dashboard/list state from the active
- * observable repository. Debug demo mode temporarily swaps that active source.
+ * observable repository. Dashboard facts come from the shared aggregator using
+ * an injected clock and device time zone, so period totals are deterministic
+ * and recompute when the device zone changes. Debug demo mode temporarily swaps
+ * the active source.
  */
 class AppViewModel(
     private val primaryRepository: TransactionRepository,
@@ -38,11 +49,15 @@ class AppViewModel(
     private val demoRepository: TransactionRepository?,
     private val importRunner: ImportRunner,
     initialPermissionGranted: Boolean,
+    private val nowEpochMillis: () -> Long = System::currentTimeMillis,
+    private val timeZone: () -> TimeZone = { TimeZone.of(ZoneId.systemDefault().id) },
+    private val sourceMessageLookup: SourceMessageLookup? = null,
 ) : ViewModel() {
     private var repositoryObservation: Job? = null
     private var activeRepository = primaryRepository
     private var ledger: List<LedgerTransaction> = emptyList()
     private var editJob: Job? = null
+    private var sourceJob: Job? = null
     private var importObservation: Job? = null
     private var importJob: Job? = null
     private var platformPermissionGranted = initialPermissionGranted
@@ -77,6 +92,9 @@ class AppViewModel(
 
     fun onAppResumed(granted: Boolean, shouldShowRationale: Boolean) {
         updatePlatformPermission(granted, shouldShowRationale)
+        // A backgrounded app may resume in a new time zone; period windows follow
+        // the device zone, so recompute dashboard facts from the same stored data.
+        _uiState.update { it.copy(dashboard = computeDashboard(ledger, it.dashboard.period, it.usingDemoData)) }
         resumeReconciliationPending = granted && !_uiState.value.isScanning
         maybeRunPendingReconciliation()
     }
@@ -85,6 +103,18 @@ class AppViewModel(
         _uiState.update { it.copy(selectedDestination = destination) }
     }
 
+    fun onDashboardPeriodSelected(period: DashboardPeriod) {
+        _uiState.update { it.copy(dashboard = computeDashboard(ledger, period, it.usingDemoData)) }
+    }
+
+    fun onDashboardCategorySelected(category: SpendCategory) =
+        openDashboardTransactions(TransactionFilter(category = category, currency = CurrencyCode.INR))
+
+    fun onDashboardExcludedSelected() =
+        openDashboardTransactions(TransactionFilter(included = false, currency = CurrencyCode.INR))
+
+    fun onDashboardForeignSelected() = openDashboardTransactions(TransactionFilter(foreignOnly = true))
+
     fun onTransactionFilterChanged(filter: TransactionFilter) {
         _uiState.update { it.copy(transactions = it.transactions.copy(
             filter = filter, transactions = ledger.filteredBy(filter),
@@ -92,6 +122,7 @@ class AppViewModel(
     }
 
     fun onTransactionSelected(id: String) {
+        dismissSourceView()
         _uiState.update { it.copy(transactions = it.transactions.copy(
             selected = ledger.firstOrNull { row -> row.id == id },
             saveFailed = false, saveSucceeded = false,
@@ -100,12 +131,64 @@ class AppViewModel(
 
     fun onTransactionClosed() {
         if (_uiState.value.transactions.isSaving) return
+        dismissSourceView()
         _uiState.update { it.copy(transactions = it.transactions.copy(selected = null)) }
+    }
+
+    fun onViewSourceMessage() {
+        val selected = _uiState.value.transactions.selected ?: return
+        if (_uiState.value.transactions.sourceView == SourceViewUiState.Loading) return
+        dismissSourceView()
+        val lookup = sourceMessageLookup
+        val permissionGranted = platformPermissionGranted
+        val sourceView = when {
+            lookup == null -> SourceViewUiState.Unavailable(SourceUnavailableReason.LOOKUP_FAILED)
+            !permissionGranted -> SourceViewUiState.Unavailable(SourceUnavailableReason.PERMISSION_REVOKED)
+            else -> null
+        }
+        if (sourceView != null) {
+            _uiState.update { it.copy(transactions = it.transactions.copy(sourceView = sourceView)) }
+            return
+        }
+        _uiState.update { it.copy(transactions = it.transactions.copy(sourceView = SourceViewUiState.Loading)) }
+        sourceJob = viewModelScope.launch {
+            try {
+                val result = lookup!!.lookup(selected)
+                _uiState.update {
+                    it.copy(transactions = it.transactions.copy(
+                        sourceView = when (result) {
+                            is SourceLookupResult.Found -> SourceViewUiState.Found(
+                                sender = result.sender,
+                                body = result.body,
+                                receivedAtEpochMillis = result.receivedAtEpochMillis,
+                            )
+                            is SourceLookupResult.Unavailable -> SourceViewUiState.Unavailable(result.reason)
+                        },
+                    ))
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(transactions = it.transactions.copy(
+                        sourceView = SourceViewUiState.Unavailable(SourceUnavailableReason.LOOKUP_FAILED),
+                    ))
+                }
+            }
+        }
+    }
+
+    fun onDismissSourceMessage() = dismissSourceView()
+
+    private fun dismissSourceView() {
+        sourceJob?.cancel()
+        sourceJob = null
+        _uiState.update { it.copy(transactions = it.transactions.copy(sourceView = null)) }
     }
 
     fun onRetryTransactions() = observe(activeRepository)
 
-    fun onSaveTransaction(category: SpendCategory?, included: Boolean?) {
+    fun onSaveTransaction(category: SpendCategory, included: Boolean) {
         val selected = _uiState.value.transactions.selected ?: return
         if (_uiState.value.transactions.isSaving) return
         val repository = activeRepository
@@ -115,7 +198,7 @@ class AppViewModel(
         editJob = viewModelScope.launch {
             try {
                 checkNotNull(repository.getById(selected.id))
-                repository.updateOverrides(selected.id, category, included)
+                repository.updateTransaction(selected.id, category, included)
                 // Read back before acknowledging the save; repository observation may lag.
                 val saved = checkNotNull(repository.getById(selected.id))
                 onTransactionsChanged(ledger.map { if (it.id == saved.id) saved else it })
@@ -180,21 +263,9 @@ class AppViewModel(
     private fun onTransactionsChanged(transactions: List<LedgerTransaction>) {
         ledger = transactions
         val usingDemoData = _uiState.value.usingDemoData
-        val includedInr = transactions.filter {
-            it.transaction.money.currency == CurrencyCode.INR && it.isIncludedInSpend
-        }
         _uiState.update {
             it.copy(
-                dashboard = DashboardUiState(
-                    inrSpendMinor = includedInr.sumOf { transaction ->
-                        transaction.transaction.money.amountMinor
-                    },
-                    includedTransactions = includedInr.size,
-                    foreignTransactions = transactions.count { transaction ->
-                        transaction.transaction.money.currency != CurrencyCode.INR
-                    },
-                    isDemo = usingDemoData,
-                ),
+                dashboard = computeDashboard(transactions, it.dashboard.period, usingDemoData),
                 transactions = it.transactions.copy(
                     transactions = transactions.filteredBy(it.transactions.filter),
                     isDemo = usingDemoData,
@@ -206,6 +277,43 @@ class AppViewModel(
                 ),
             )
         }
+    }
+
+    /**
+     * Deep links a dashboard fact to the transaction list with a filter that
+     * reproduces the tapped count: same period window plus the tapped dimension.
+     */
+    private fun openDashboardTransactions(filter: TransactionFilter) {
+        val range = _uiState.value.dashboard.report?.range ?: return
+        onTransactionFilterChanged(filter.copy(
+            fromInclusive = range.startInclusiveEpochMillis,
+            toExclusive = range.endExclusiveEpochMillis,
+        ))
+        _uiState.update { it.copy(selectedDestination = TopLevelDestination.TRANSACTIONS) }
+    }
+
+    private fun computeDashboard(
+        transactions: List<LedgerTransaction>,
+        period: DashboardPeriod,
+        isDemo: Boolean,
+    ): DashboardUiState {
+        if (transactions.isEmpty()) {
+            return DashboardUiState(period = period, isDemo = isDemo)
+        }
+        val zone = timeZone()
+        val now = nowEpochMillis()
+        val currentRange = PeriodCalculator.currentRange(now, zone, period)
+        val report = ReportAggregator.compute(transactions, currentRange, period, zone)
+        val previousRange = PeriodCalculator.sameElapsedPreviousRange(now, zone, period)
+        val previous = ReportAggregator.compute(transactions, previousRange, period, zone)
+        val comparison = ReportAggregator.compare(report.includedInrTotalMinor, previous.includedInrTotalMinor)
+        return DashboardUiState(
+            period = period,
+            report = report,
+            comparison = comparison,
+            hasTransactions = true,
+            isDemo = isDemo,
+        )
     }
 
     private fun observe(repository: TransactionRepository) {
@@ -351,6 +459,7 @@ class AppViewModel(
         private val demoRepository: TransactionRepository?,
         private val importRunner: ImportRunner,
         private val initialPermissionGranted: Boolean,
+        private val sourceMessageLookup: SourceMessageLookup,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -363,6 +472,7 @@ class AppViewModel(
                 demoRepository = demoRepository,
                 importRunner = importRunner,
                 initialPermissionGranted = initialPermissionGranted,
+                sourceMessageLookup = sourceMessageLookup,
             ) as T
         }
     }

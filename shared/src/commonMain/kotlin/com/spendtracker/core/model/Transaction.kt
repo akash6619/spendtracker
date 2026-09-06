@@ -65,8 +65,7 @@ enum class TransactionKind {
 
 /**
  * Fixed MVP buckets used to group transactions and build category reports.
- * Every parsed transaction receives one detected value, with [OTHER] acting as
- * the deterministic fallback until the user supplies an override.
+ * The parser assigns one detected value, and the user can later change it.
  */
 enum class SpendCategory {
     FOOD_AND_DINING,
@@ -100,11 +99,19 @@ enum class TransactionReviewReason {
 }
 
 /**
- * Structured financial fields inferred from one recognized source message.
+ * Identifies the platform source that produced a transaction.
+ * Only Android SMS exists today, but the explicit type prevents identifiers
+ * from different future sources from sharing the same uniqueness namespace.
+ */
+enum class SourceType {
+    ANDROID_SMS,
+}
+
+/**
+ * Parser-produced transaction facts before they are stored.
  *
- * This model contains no raw body or sender. It records the parser's detected
- * values, confidence, version, and detected inclusion so results can later be
- * reviewed or reparsed without Room reads changing their spend semantics.
+ * Every field has a single value: the parser fills them initially, and re-import
+ * overwrites them. This model contains no raw body or sender.
  */
 data class ParsedTransaction(
     val sourceId: String?,
@@ -117,26 +124,13 @@ data class ParsedTransaction(
     val accountHint: String?,
     val confidence: Double,
     val parserVersion: Int,
-    val detectedIncludedInSpend: Boolean = direction == TransactionDirection.DEBIT &&
+    val includedInSpend: Boolean = direction == TransactionDirection.DEBIT &&
         kind in setOf(TransactionKind.PURCHASE, TransactionKind.FEE),
     val reviewReasons: Set<TransactionReviewReason> = emptySet(),
 ) {
     init {
         require(confidence in 0.0..1.0) { "Confidence must be between 0 and 1" }
     }
-
-    /** Uses the parser's durable detected policy; a later user override takes precedence. */
-    val isIncludedInSpend: Boolean
-        get() = detectedIncludedInSpend
-}
-
-/**
- * Identifies the platform source that produced a transaction.
- * Only Android SMS exists today, but the explicit type prevents identifiers
- * from different future sources from sharing the same uniqueness namespace.
- */
-enum class SourceType {
-    ANDROID_SMS,
 }
 
 /**
@@ -154,23 +148,26 @@ data class TransactionCandidate(
 /**
  * Domain representation of a transaction stored in the local ledger.
  *
- * It combines detected fields with nullable user corrections. Consumers should
- * use [effectiveCategory] and [isIncludedInSpend] so explicit user choices always
- * take precedence and survive later imports or parser updates.
+ * Every field has exactly one value: parser-detected initially, then replaced by
+ * a user edit, and overwritten again only when the source message is re-imported.
+ * Consumers read these values directly; there are no hidden detected/override
+ * duplicates.
  */
 data class LedgerTransaction(
     val id: String,
     val sourceType: SourceType,
     val sourceProviderId: String?,
     val sourceFingerprint: String,
-    val transaction: ParsedTransaction,
-    val userCategory: SpendCategory? = null,
-    val userIncludedInSpend: Boolean? = null,
-) {
-    /** User corrections always take precedence over detected defaults. */
-    val effectiveCategory: SpendCategory
-        get() = userCategory ?: transaction.category
-
-    val isIncludedInSpend: Boolean
-        get() = userIncludedInSpend ?: transaction.isIncludedInSpend
-}
+    val sourceReceivedAtEpochMillis: Long,
+    val money: Money,
+    val direction: TransactionDirection,
+    val kind: TransactionKind,
+    val category: SpendCategory,
+    val merchant: String?,
+    val accountHint: String?,
+    val confidence: Double,
+    val parserVersion: Int,
+    val reviewReasons: Set<TransactionReviewReason>,
+    val includedInSpend: Boolean,
+    val userEdited: Boolean = false,
+)

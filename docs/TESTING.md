@@ -48,6 +48,27 @@ transaction-override precedence, and effective category reporting queries.
 They also verify durable review-reason resolution, normalized matching in both
 repository implementations, and the version-1-to-version-3 migration chain.
 
+MVP-07 adds shared period-calculator tests for Monday-start weeks, calendar
+months, year and leap edges, Kolkata/UTC offsets, and a DST transition, plus
+aggregator tests for included-INR-only headlines, exact category-sum invariants,
+daily bucketing, counts, and comparison rounding. Android ViewModel tests use a
+fixed clock and zone for period totals, switching, deep-link filters, and
+zone-change recomputation; connected Compose tests cover the period selector,
+headline, counts, category links, empty state, and daily-bar counts.
+
+The source-message view adds ViewModel tests for found/dismiss, permission-gated
+lookup, and clearing on close or selection change, plus Compose tests for the
+found body, unavailable explanation, and the view-source intent. Source-view
+fixtures are synthetic and the body is never logged.
+
+Review resolution (D-018) adds parser tests for the `on X` merchant anchor and
+its digit/possessive guards, filter tests proving MISSING_MERCHANT-only rows
+leave review, and repository/ViewModel tests that a category save drops only
+`UNKNOWN_CATEGORY` while amount/direction/type concerns survive with their
+confidence. The single-value model (D-019) adds repository tests that re-imports
+refresh untouched rows and skip user-edited rows, plus the version-1-to-5
+migration chain.
+
 ### Android local unit tests
 
 MVP-06 tests combined filter boundaries/currencies against Room, override
