@@ -11,6 +11,8 @@ import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
 import com.spendtracker.core.model.TransactionReviewReason
 import com.spendtracker.core.model.SourceMessage
+import com.spendtracker.core.model.TransactionFilter
+import com.spendtracker.core.model.filteredBy
 import com.spendtracker.core.parser.FinancialMessageParser
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -35,11 +37,15 @@ class RoomTransactionRepositoryTest {
         )
         firstRepository.upsert(listOf(candidate("7", "same")))
         firstRepository.upsert(listOf(candidate("7", "same")))
+        val id = firstRepository.observeTransactions().first().single().id
+        firstRepository.updateOverrides(id, SpendCategory.TRAVEL, false)
         assertEquals(1, firstRepository.observeTransactions().first().size)
         firstDatabase.close()
 
         val reopened = createSpendTrackerDatabase(file)
         assertEquals(1, reopened.transactionDao().count())
+        assertEquals("TRAVEL", reopened.transactionDao().findById(id)?.userCategory)
+        assertEquals(false, reopened.transactionDao().findById(id)?.userIncludedInSpend)
         reopened.close()
         file.delete()
     }
@@ -212,6 +218,29 @@ class RoomTransactionRepositoryTest {
             assertTrue(repository.getById(food.id) != null)
             repository.clear()
             assertEquals(0, database.transactionDao().count())
+        }
+    }
+
+    @Test
+    fun ledgerFiltersComposeAcrossBoundaryDatesCurrenciesAndEffectiveOverrides() = runTest {
+        withRepository { repository, database ->
+            repository.upsert(listOf(
+                candidate("1", "b", timestamp = 1000, currency = CurrencyCode.JPY, confidence = .6),
+                candidate("2", "a", timestamp = 1000, currency = CurrencyCode.JPY, confidence = .6),
+                candidate("3", "end", timestamp = 2000, currency = CurrencyCode.JPY, confidence = .6),
+                candidate("4", "before", timestamp = 999),
+                candidate("5", "usd", timestamp = 1500, currency = CurrencyCode.USD),
+            ))
+            var rows = repository.observeTransactions().first()
+            rows.filter { it.transaction.money.currency == CurrencyCode.JPY }.forEach {
+                repository.updateOverrides(it.id, SpendCategory.TRAVEL, false)
+            }
+            rows = repository.observeTransactions().first()
+            val filter = TransactionFilter(1000, 2000, SpendCategory.TRAVEL, false, true, CurrencyCode.JPY)
+            assertEquals(listOf("a", "b"), rows.filteredBy(filter).map { it.sourceFingerprint })
+            assertEquals(3, database.transactionDao().inPeriod(1000, 2000).size)
+            assertEquals(5, rows.filteredBy(TransactionFilter()).size)
+            assertTrue(rows.filteredBy(filter.copy(needsReview = false)).isEmpty())
         }
     }
 

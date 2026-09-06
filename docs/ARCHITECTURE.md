@@ -70,6 +70,8 @@ Currently contains:
 - thin `MainActivity` composition/permission boundary
 - Compose app shell with onboarding, dashboard, transactions, and settings
 - immutable app/screen state and constructor-injected `AppViewModel`
+- lazy ledger rows, combined filters, and parsed transaction detail/editor
+- repository-backed category/inclusion overrides and explicit reset controls
 - light/dark Material theme, resources, reusable components, and previews
 - runtime `READ_SMS` permission request
 - `SmsInboxReader` implementing the shared `MessageSource` boundary
@@ -123,6 +125,12 @@ androidApp/.../app/
   must be derived from stored transactions, not the latest scan callback.
 - Provide a debug-only synthetic data source so UI can be developed and tested
   without access to a person's SMS inbox.
+
+MVP-06 filters the observed parsed ledger with shared `TransactionFilter` rules;
+rows are composed lazily, but database paging is not implemented. Date inputs
+use ISO calendar dates in the device time zone, with an inclusive through-date
+converted to an exclusive next-day boundary. Detail selection remains independent
+of filters so a saved correction cannot unexpectedly dismiss the editor.
 
 ## Import pipeline
 

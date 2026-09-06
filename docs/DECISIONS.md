@@ -160,3 +160,17 @@ entry that records the reason, migration impact, and affected tests.
   unrelated amount, direction, kind, or merchant concerns after a Room round-trip.
 - Consequence: Room schema version 3 adds `reviewReasons` with an empty migration
   default. No raw message content or identifiers are introduced.
+
+## D-015 — Ledger editing and review visibility
+
+- Date: 2026-09-06
+- Status: Accepted and validated
+- Decision: MVP-06 edits only category and inclusion overrides. Reset clears both
+  overrides. Filtering uses effective values, calendar date bounds, currency, and
+  detected review state. Detail stays open after a row leaves the filtered list.
+- Reason: Corrections must be auditable and preserve parsed facts through reparse.
+- Consequence: Review means any stored reason, unknown kind, or confidence below
+  80%; this is a presentation threshold, not a parser acceptance change. Overrides
+  do not dismiss original review concerns. Source viewing remains deferred pending
+  provider/privacy validation; this version displays parsed fields only. Merchant
+  rule management remains a repository capability with no automatic UI creation.

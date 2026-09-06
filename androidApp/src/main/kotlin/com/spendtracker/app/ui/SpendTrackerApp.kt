@@ -26,6 +26,7 @@ import com.spendtracker.app.ui.dashboard.DashboardScreen
 import com.spendtracker.app.ui.onboarding.OnboardingScreen
 import com.spendtracker.app.ui.settings.SettingsScreen
 import com.spendtracker.app.ui.transactions.TransactionsScreen
+import com.spendtracker.app.ui.transactions.TransactionActions
 
 /**
  * Stable semantic identifiers attached to important Compose controls.
@@ -60,6 +61,13 @@ fun SpendTrackerApp(
         onUseDemoData = viewModel::onUseDemoData,
         onLeaveDemoData = viewModel::onLeaveDemoData,
         onDestinationSelected = viewModel::onDestinationSelected,
+        transactionActions = TransactionActions(
+            filter = viewModel::onTransactionFilterChanged,
+            open = viewModel::onTransactionSelected,
+            close = viewModel::onTransactionClosed,
+            save = viewModel::onSaveTransaction,
+            retry = viewModel::onRetryTransactions,
+        ),
     )
 }
 
@@ -73,6 +81,7 @@ fun SpendTrackerAppContent(
     onUseDemoData: () -> Unit,
     onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
+    transactionActions: TransactionActions = TransactionActions(),
 ) {
     when (state.stage) {
         AppStage.INITIALIZING -> Box(
@@ -99,6 +108,7 @@ fun SpendTrackerAppContent(
             onCancelImport = onCancelImport,
             onLeaveDemoData = onLeaveDemoData,
             onDestinationSelected = onDestinationSelected,
+            transactionActions = transactionActions,
         )
     }
 }
@@ -112,6 +122,7 @@ private fun MainAppScaffold(
     onCancelImport: () -> Unit,
     onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
+    transactionActions: TransactionActions,
 ) {
     Scaffold(
         bottomBar = {
@@ -144,6 +155,7 @@ private fun MainAppScaffold(
             TopLevelDestination.TRANSACTIONS -> TransactionsScreen(
                 state = state.transactions,
                 modifier = Modifier.padding(padding),
+                actions = transactionActions,
             )
 
             TopLevelDestination.SETTINGS -> SettingsScreen(

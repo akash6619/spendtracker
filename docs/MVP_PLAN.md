@@ -22,8 +22,8 @@ slice begins.
 | MVP-03 | Production import lifecycle | Complete | MVP-02 | Clear onboarding and durable three-month import/retry status |
 | MVP-04 | Detection and parser hardening | Complete | MVP-02 | Supported messages become explainable, well-tested records |
 | MVP-05 | Categorization and override rules | Complete | MVP-04 | Basic buckets are reliable and corrections persist |
-| MVP-06 | Transaction list, filters, and detail/edit | Ready | MVP-03, MVP-05 | Users can inspect and correct the ledger |
-| MVP-07 | Weekly and monthly dashboard | Planned | MVP-05, MVP-06 | Users see reproducible period and category totals |
+| MVP-06 | Transaction list, filters, and detail/edit | Complete | MVP-03, MVP-05 | Users can inspect and correct the ledger |
+| MVP-07 | Weekly and monthly dashboard | Ready | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Planned | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Planned | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Planned | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
@@ -284,7 +284,7 @@ Custom category creation, category budgets, or remote classification.
 
 ## MVP-06 — Transaction list, filters, and detail/edit
 
-**Status:** Planned  
+**Status:** Complete
 **Depends on:** MVP-03, MVP-05
 
 ### Goal
@@ -305,20 +305,24 @@ dashboard totals.
 
 ### Acceptance criteria
 
-- [ ] List ordering is deterministic for equal timestamps.
-- [ ] Filters compose correctly and can be cleared.
-- [ ] Editing category or inclusion updates the list immediately and survives
+- [x] List ordering is deterministic for equal timestamps.
+- [x] Filters compose correctly and can be cleared.
+- [x] Editing category or inclusion updates the list immediately and survives
       app restart/reparse.
-- [ ] Foreign amount formatting uses its own currency/fraction digits.
-- [ ] Excluded records visibly explain why they do not affect spend.
-- [ ] No UI exposes full source body except an explicit ephemeral source view.
+- [x] Foreign amount formatting uses its own currency/fraction digits.
+- [x] Excluded records visibly explain why they do not affect spend.
+- [x] No UI exposes full source body except an explicit ephemeral source view.
 
 ### Test gate
 
-- [ ] ViewModel tests for query/filter/edit/error state transitions.
-- [ ] Compose tests for list, combined filters, detail edits, and empty states.
-- [ ] DAO paging/query tests with boundary timestamps and currencies.
-- [ ] Manual font scaling and TalkBack pass for list and editor.
+- [x] ViewModel tests for query/filter/edit/error state transitions.
+- [x] Compose tests for list, combined filters, detail edits, and empty states.
+- [x] DAO/query tests with boundary timestamps and currencies; UI uses lazy rows,
+      with the parsed ledger observed in memory rather than database paging.
+- [x] Manual 150% font scaling and basic TalkBack focus/navigation checks on API 37.
+
+Optional source lookup remains deferred pending provider/privacy validation.
+Spoken-output quality and API 26/physical-device accessibility remain release checks.
 
 ### Not in this slice
 
@@ -328,7 +332,7 @@ Transaction splitting, notes, receipt attachments, or manual non-SMS entry.
 
 ## MVP-07 — Weekly and monthly dashboard
 
-**Status:** Planned  
+**Status:** Ready
 **Depends on:** MVP-05, MVP-06
 
 ### Goal

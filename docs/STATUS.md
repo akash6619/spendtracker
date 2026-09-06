@@ -1,8 +1,8 @@
 # Current status
 
 - Last updated: 2026-09-06
-- Current milestone: MVP-05 categorization and override rules complete
-- Next recommended slice: MVP-06 transaction list, filters, and detail/edit
+- Current milestone: MVP-06 transaction list, filters, and detail/edit complete
+- Next recommended slice: MVP-07 weekly and monthly dashboard
 - Active work: None
 
 ## Active work
@@ -11,7 +11,7 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 | Slice | Agent/task | Files or area | Started | Notes |
 | --- | --- | --- | --- | --- |
-| None | — | — | — | MVP-05 review fixes complete; MVP-06 is ready |
+| None | — | — | — | MVP-06 complete; MVP-07 is ready |
 
 ## Implemented now
 
@@ -79,7 +79,7 @@ Agents must claim work here before implementation and clear the row at handoff.
 - Credits/refunds/transfers/ATM withdrawals excluded from spend by policy.
 - Persisted results feeding a dashboard summary and chronological transaction list.
 - No raw SMS persistence, login, backend, or internet permission.
-- Thirty-two shared JVM tests, nine Android local tests, four connected Compose
+- Thirty-three shared JVM tests, twelve Android local tests, six connected Compose
   tests, two connected importer/provider tests, and one connected Keystore test.
 - Minimal code comments document privacy boundaries, exact-money conversion,
   deduplication collisions, override precedence, and repository switching.
@@ -200,13 +200,30 @@ in-memory matching, parser/category version linkage, batch rule lookup, and
 version-1-to-version-3 migration regressions. Host/iOS/lint/APK checks and all
 seven emulator-only connected tests passed; no physical device was targeted.
 
+On 2026-09-06, MVP-06 passed shared/JVM and Android unit tests, iOS simulator
+compilation, lint, debug/release builds, and nine connected tests on emulator-5554
+(API 37). New checks cover combined filters and exact date boundaries, effective
+overrides, Room close/reopen persistence, save/reset, failed-save retry, load
+recovery, and Compose editor/filter flows. Manual synthetic-demo inspection at
+150% font scale confirmed wrapping, scrolling, Save/Reset reachability, and
+TalkBack focus/menu/back navigation. Emulator font/accessibility settings were
+restored; the OnePlus was not targeted. Spoken-output quality and API 26 remain
+release validation items.
+
+MVP-06 now provides lazy chronological rows; date/category/inclusion/review/currency
+filters; parsed detail with exclusion and review explanations; category/inclusion
+override saves and reset. Saved edits update the list and dashboard and keep the
+selected detail open even when it no longer matches filters. Source viewing is
+explicitly unavailable, and no raw SMS is read by these screens.
+
 ## Known gaps
 
 - Top-level destination survives configuration changes through the ViewModel but
   is not restored after process death.
 - Parser templates remain a conservative controlled-MVP corpus rather than
   attempting universal bank coverage; unmatched messages are now explainable.
-- A read-only transaction list exists, but filters, detail, and editing do not.
+- Database paging and original-message viewing are deferred; lazy UI rows filter
+  the observed parsed ledger. Unsaved editor drafts are not restored after process death.
 - Weekly and monthly aggregations do not exist.
 - There is no `RECEIVE_SMS` live ingestion; foreground overlap reconciliation exists.
 - The Settings shell exists, but delete-all and complete data-lifecycle controls
@@ -217,7 +234,7 @@ seven emulator-only connected tests passed; no physical device was targeted.
 
 ## Open questions
 
-These do not block starting MVP-06. Resolve them in the owning slice and record
+These do not block starting MVP-07. Resolve them in the owning slice and record
 a decision:
 
 1. Exact confidence threshold for automatic acceptance versus needs-review.

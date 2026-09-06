@@ -50,6 +50,11 @@ repository implementations, and the version-1-to-version-3 migration chain.
 
 ### Android local unit tests
 
+MVP-06 tests combined filter boundaries/currencies against Room, override
+close/reopen persistence, editor-to-dashboard updates, reset, failed-save retry,
+and observation recovery. Connected tests exercise combined filters/clear and
+category/inclusion edits/reset through the Compose controls.
+
 Cover ViewModel state transitions and Android-independent orchestration with
 fakes: permission state, first import, retry, empty result, partial failure,
 editing, deletion, and live refresh.

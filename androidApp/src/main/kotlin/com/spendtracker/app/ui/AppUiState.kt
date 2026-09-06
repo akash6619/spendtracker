@@ -3,6 +3,7 @@ package com.spendtracker.app.ui
 import com.spendtracker.core.importing.ImportProgress
 import com.spendtracker.core.importing.ImportRunStatus
 import com.spendtracker.core.model.LedgerTransaction
+import com.spendtracker.core.model.TransactionFilter
 
 /**
  * Identifies which top-level experience Compose should render.
@@ -73,12 +74,20 @@ data class DashboardUiState(
 
 /**
  * Render-ready state for the current transaction list.
- * It carries the repository's ordered ledger records and whether they came from
- * debug demo mode; filters and editing arrive in MVP-06.
+ * It carries filtered records plus the selected detail independently of filtering,
+ * so saving an edit never unexpectedly closes a record that leaves the result set.
+ * Errors are coarse flags and never contain storage exception details.
  */
 data class TransactionsUiState(
     val transactions: List<LedgerTransaction> = emptyList(),
     val isDemo: Boolean = false,
+    val filter: TransactionFilter = TransactionFilter(),
+    val selected: LedgerTransaction? = null,
+    val isLoading: Boolean = false,
+    val loadFailed: Boolean = false,
+    val isSaving: Boolean = false,
+    val saveFailed: Boolean = false,
+    val saveSucceeded: Boolean = false,
 )
 
 /**

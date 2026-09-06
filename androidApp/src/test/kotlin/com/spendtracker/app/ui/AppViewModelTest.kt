@@ -15,6 +15,8 @@ import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
+import com.spendtracker.core.model.TransactionFilter
+import com.spendtracker.core.repository.TransactionRepository
 import com.spendtracker.core.repository.ImportStateRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -36,6 +38,72 @@ import kotlin.test.assertTrue
 class AppViewModelTest {
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
+
+    @Test
+    fun editsUpdateFilteredListAndDashboardWithoutClosingDetailAndCanReset() = runTest {
+        val repository = InMemoryTransactionRepository(listOf(transaction("edit")))
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, false)
+        advanceUntilIdle()
+        val id = vm.uiState.value.transactions.transactions.single().id
+        vm.onTransactionFilterChanged(TransactionFilter(category = SpendCategory.FOOD_AND_DINING, included = true))
+        vm.onTransactionSelected(id)
+        vm.onSaveTransaction(SpendCategory.TRAVEL, false)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.transactions.transactions.isEmpty())
+        assertEquals(SpendCategory.TRAVEL, vm.uiState.value.transactions.selected?.effectiveCategory)
+        assertEquals(0, vm.uiState.value.dashboard.inrSpendMinor)
+        assertTrue(vm.uiState.value.transactions.saveSucceeded)
+        vm.onSaveTransaction(null, null)
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.transactions.transactions.size)
+        assertEquals(685_00, vm.uiState.value.dashboard.inrSpendMinor)
+        vm.onTransactionClosed()
+        assertEquals(null, vm.uiState.value.transactions.selected)
+    }
+
+    @Test
+    fun failedEditRetainsStoredValuesAndCanRetry() = runTest {
+        val backing = InMemoryTransactionRepository(listOf(transaction("edit")))
+        var fail = true
+        val repository = object : TransactionRepository by backing {
+            override suspend fun updateOverrides(id: String, category: SpendCategory?, includedInSpend: Boolean?) {
+                if (fail) error("synthetic failure")
+                backing.updateOverrides(id, category, includedInSpend)
+            }
+        }
+        val vm = AppViewModel(repository, FakeImportStateRepository(), null, ImportRunner { _, _ -> ImportState() }, false)
+        advanceUntilIdle()
+        vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
+        vm.onSaveTransaction(SpendCategory.TRAVEL, false)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.transactions.saveFailed)
+        assertEquals(685_00, vm.uiState.value.dashboard.inrSpendMinor)
+        fail = false
+        vm.onSaveTransaction(SpendCategory.TRAVEL, false)
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.transactions.saveFailed)
+        assertEquals(0, vm.uiState.value.dashboard.inrSpendMinor)
+    }
+
+    @Test
+    fun observationFailureCanRetryAndClearFilters() = runTest {
+        val backing = InMemoryTransactionRepository(listOf(transaction("retry")))
+        var fail = true
+        val repository = object : TransactionRepository by backing {
+            override fun observeTransactions() = if (fail) kotlinx.coroutines.flow.flow { error("synthetic") } else backing.observeTransactions()
+        }
+        val vm = AppViewModel(repository, FakeImportStateRepository(), null, ImportRunner { _, _ -> ImportState() }, false)
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.transactions.loadFailed)
+        fail = false
+        vm.onRetryTransactions()
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.transactions.loadFailed)
+        vm.onTransactionFilterChanged(TransactionFilter(currency = CurrencyCode.JPY))
+        assertTrue(vm.uiState.value.transactions.transactions.isEmpty())
+        vm.onTransactionFilterChanged(TransactionFilter())
+        assertEquals(1, vm.uiState.value.transactions.transactions.size)
+    }
 
     @Test
     fun successfulInitialImportMovesFromOnboardingToDashboard() = runTest {

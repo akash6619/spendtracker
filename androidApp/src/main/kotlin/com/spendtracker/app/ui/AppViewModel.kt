@@ -11,6 +11,9 @@ import com.spendtracker.core.importing.ImportRunner
 import com.spendtracker.core.importing.ImportState
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
+import com.spendtracker.core.model.SpendCategory
+import com.spendtracker.core.model.TransactionFilter
+import com.spendtracker.core.model.filteredBy
 import com.spendtracker.core.repository.ImportStateRepository
 import com.spendtracker.core.repository.TransactionRepository
 import kotlinx.coroutines.CancellationException
@@ -37,6 +40,9 @@ class AppViewModel(
     initialPermissionGranted: Boolean,
 ) : ViewModel() {
     private var repositoryObservation: Job? = null
+    private var activeRepository = primaryRepository
+    private var ledger: List<LedgerTransaction> = emptyList()
+    private var editJob: Job? = null
     private var importObservation: Job? = null
     private var importJob: Job? = null
     private var platformPermissionGranted = initialPermissionGranted
@@ -77,6 +83,53 @@ class AppViewModel(
 
     fun onDestinationSelected(destination: TopLevelDestination) {
         _uiState.update { it.copy(selectedDestination = destination) }
+    }
+
+    fun onTransactionFilterChanged(filter: TransactionFilter) {
+        _uiState.update { it.copy(transactions = it.transactions.copy(
+            filter = filter, transactions = ledger.filteredBy(filter),
+        )) }
+    }
+
+    fun onTransactionSelected(id: String) {
+        _uiState.update { it.copy(transactions = it.transactions.copy(
+            selected = ledger.firstOrNull { row -> row.id == id },
+            saveFailed = false, saveSucceeded = false,
+        )) }
+    }
+
+    fun onTransactionClosed() {
+        if (_uiState.value.transactions.isSaving) return
+        _uiState.update { it.copy(transactions = it.transactions.copy(selected = null)) }
+    }
+
+    fun onRetryTransactions() = observe(activeRepository)
+
+    fun onSaveTransaction(category: SpendCategory?, included: Boolean?) {
+        val selected = _uiState.value.transactions.selected ?: return
+        if (_uiState.value.transactions.isSaving) return
+        val repository = activeRepository
+        _uiState.update { it.copy(transactions = it.transactions.copy(
+            isSaving = true, saveFailed = false, saveSucceeded = false,
+        )) }
+        editJob = viewModelScope.launch {
+            try {
+                checkNotNull(repository.getById(selected.id))
+                repository.updateOverrides(selected.id, category, included)
+                // Read back before acknowledging the save; repository observation may lag.
+                val saved = checkNotNull(repository.getById(selected.id))
+                onTransactionsChanged(ledger.map { if (it.id == saved.id) saved else it })
+                _uiState.update { it.copy(transactions = it.transactions.copy(
+                    isSaving = false, saveSucceeded = true,
+                )) }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                _uiState.update { it.copy(transactions = it.transactions.copy(
+                    isSaving = false, saveFailed = true,
+                )) }
+            }
+        }
     }
 
     fun onScanMessages() {
@@ -125,6 +178,7 @@ class AppViewModel(
     }
 
     private fun onTransactionsChanged(transactions: List<LedgerTransaction>) {
+        ledger = transactions
         val usingDemoData = _uiState.value.usingDemoData
         val includedInr = transactions.filter {
             it.transaction.money.currency == CurrencyCode.INR && it.isIncludedInSpend
@@ -141,9 +195,14 @@ class AppViewModel(
                     },
                     isDemo = usingDemoData,
                 ),
-                transactions = TransactionsUiState(
-                    transactions = transactions,
+                transactions = it.transactions.copy(
+                    transactions = transactions.filteredBy(it.transactions.filter),
                     isDemo = usingDemoData,
+                    selected = it.transactions.selected?.let { selected ->
+                        transactions.firstOrNull { row -> row.id == selected.id }
+                    },
+                    isLoading = false,
+                    loadFailed = false,
                 ),
             )
         }
@@ -152,8 +211,21 @@ class AppViewModel(
     private fun observe(repository: TransactionRepository) {
         // Only one source may drive the UI when switching between real and demo data.
         repositoryObservation?.cancel()
+        if (activeRepository !== repository) {
+            editJob?.cancel()
+            ledger = emptyList()
+            _uiState.update { it.copy(transactions = TransactionsUiState()) }
+        }
+        activeRepository = repository
+        _uiState.update { it.copy(transactions = it.transactions.copy(isLoading = true, loadFailed = false)) }
         repositoryObservation = viewModelScope.launch {
-            repository.observeTransactions().collectLatest(::onTransactionsChanged)
+            try {
+                repository.observeTransactions().collectLatest(::onTransactionsChanged)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                _uiState.update { it.copy(transactions = it.transactions.copy(isLoading = false, loadFailed = true)) }
+            }
         }
     }
 

@@ -11,6 +11,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,12 +34,21 @@ import com.spendtracker.app.ui.format.labelResource
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
+import com.spendtracker.core.model.TransactionFilter
+import com.spendtracker.core.model.needsReview
 
 @Composable
 fun TransactionsScreen(
     state: TransactionsUiState,
     modifier: Modifier = Modifier,
+    actions: TransactionActions = TransactionActions(),
 ) {
+    if (state.selected != null) {
+        TransactionDetailScreen(state, actions, modifier)
+        return
+    }
+    var showFilters by remember { mutableStateOf(false) }
+    if (showFilters) FilterDialog(state.filter, { actions.filter(it); showFilters = false }, { showFilters = false })
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
@@ -50,11 +62,28 @@ fun TransactionsScreen(
         }
         if (state.isDemo) item { DemoBanner() }
 
-        if (state.transactions.isEmpty()) {
+        item {
+            Column {
+                TextButton(onClick = { showFilters = true }) { Text(stringResource(R.string.ledger_filters)) }
+                if (state.filter != TransactionFilter()) {
+                    Text(stringResource(R.string.filters_active))
+                    TextButton(onClick = { actions.filter(TransactionFilter()) }) { Text(stringResource(R.string.clear_filters)) }
+                }
+            }
+        }
+        if (state.isLoading) item { CircularProgressIndicator() }
+        if (state.loadFailed) item {
+            Column {
+                Text(stringResource(R.string.ledger_load_failed))
+                TextButton(onClick = actions.retry) { Text(stringResource(R.string.action_retry)) }
+            }
+        }
+
+        if (state.transactions.isEmpty() && !state.isLoading && !state.loadFailed) {
             item {
                 InfoCard(
-                    title = stringResource(R.string.transactions_empty_title),
-                    body = stringResource(R.string.transactions_empty_body),
+                    title = stringResource(if (state.filter == TransactionFilter()) R.string.transactions_empty_title else R.string.filter_empty_title),
+                    body = stringResource(if (state.filter == TransactionFilter()) R.string.transactions_empty_body else R.string.filter_empty_body),
                 )
             }
         } else {
@@ -64,23 +93,22 @@ fun TransactionsScreen(
                     transaction.id
                 },
             ) { transaction ->
-                TransactionRow(transaction)
+                TransactionRow(transaction) { actions.open(transaction.id) }
             }
         }
     }
 }
 
 @Composable
-private fun TransactionRow(transaction: LedgerTransaction) {
+private fun TransactionRow(transaction: LedgerTransaction, onClick: () -> Unit) {
     val parsed = transaction.transaction
     val amount = formatMoney(parsed.money)
     val category = stringResource(transaction.effectiveCategory.labelResource())
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .semantics(mergeDescendants = true) {
-                contentDescription = "$amount, $category"
-            },
+            .semantics(mergeDescendants = true) {},
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -118,6 +146,7 @@ private fun TransactionRow(transaction: LedgerTransaction) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                if (transaction.needsReview) Text(stringResource(R.string.review_needed), style = MaterialTheme.typography.labelMedium)
             }
             Text(amount, style = MaterialTheme.typography.titleMedium)
         }

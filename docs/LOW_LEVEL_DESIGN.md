@@ -271,8 +271,8 @@ merchants fall back to `Other`.
 `RoomTransactionRepository` loads approved rules once per import batch and checks
 each normalized key during import or reparse. The resulting precedence
 is explicit transaction override, approved merchant rule, built-in category, then
-`Other`. Rule creation/deletion is exposed through the repository for later MVP-06
-UI; deletion never modifies a transaction override.
+`Other`. Rule creation/deletion is exposed through the repository for a future
+explicit rule-management UI; deletion never modifies a transaction override.
 
 ### 6.5 Fingerprinter
 
@@ -633,7 +633,8 @@ Implemented now:
 
 Important planned work:
 
-- MVP-06: filters and transaction detail/edit;
+- MVP-06 now provides lazy ledger rows, shared combined filters, parsed detail,
+  category/inclusion saves and resets, and recoverable load/save failures;
 - MVP-07: weekly/monthly and category aggregates;
 - MVP-08: live SMS receipt plus foreground reconciliation;
 - MVP-09: complete settings, revoke guidance, and delete-all UI;
