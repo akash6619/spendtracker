@@ -1,5 +1,7 @@
 package com.spendtracker.core.parser
 
+import com.spendtracker.core.categorization.MerchantNormalizer
+import com.spendtracker.core.categorization.TransactionCategorizer
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.Money
 import com.spendtracker.core.model.ParsedTransaction
@@ -7,6 +9,7 @@ import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
+import com.spendtracker.core.model.TransactionReviewReason
 
 /**
  * Converts ephemeral financial-message text into deterministic, explainable outcomes.
@@ -22,8 +25,11 @@ import com.spendtracker.core.model.TransactionKind
  * advances; repository re-import semantics then update detected values while
  * preserving explicit user category and inclusion overrides.
  */
-class FinancialMessageParser {
-    val version: Int = PARSER_VERSION
+class FinancialMessageParser(
+    private val merchantNormalizer: MerchantNormalizer = MerchantNormalizer(),
+    private val categorizer: TransactionCategorizer = TransactionCategorizer(),
+) {
+    val version: Int = PARSER_BASE_VERSION + categorizer.version
 
     /** Returns the full explainable outcome used by import and diagnostics. */
     fun classify(message: SourceMessage): ParseOutcome {
@@ -37,12 +43,14 @@ class FinancialMessageParser {
         val kind = detectKind(text)
         val directionResult = detectDirection(text, kind)
             ?: return ParseOutcome.Rejected(RejectionReason.MISSING_DIRECTION)
-        val merchant = extractMerchant(text)
+        val merchant = merchantNormalizer.normalize(extractMerchant(text))
+        val category = categorizer.categorize(kind, merchant)
         val reviewReasons = buildSet {
-            if (amountResult.conflicting) add(ReviewReason.CONFLICTING_AMOUNTS)
-            if (directionResult.conflicting) add(ReviewReason.CONFLICTING_DIRECTIONS)
-            if (kind == TransactionKind.UNKNOWN) add(ReviewReason.UNKNOWN_KIND)
-            if (kind == TransactionKind.PURCHASE && merchant == null) add(ReviewReason.MISSING_MERCHANT)
+            if (amountResult.conflicting) add(TransactionReviewReason.CONFLICTING_AMOUNTS)
+            if (directionResult.conflicting) add(TransactionReviewReason.CONFLICTING_DIRECTIONS)
+            if (kind == TransactionKind.UNKNOWN) add(TransactionReviewReason.UNKNOWN_KIND)
+            if (category == SpendCategory.OTHER) add(TransactionReviewReason.UNKNOWN_CATEGORY)
+            if (kind == TransactionKind.PURCHASE && merchant == null) add(TransactionReviewReason.MISSING_MERCHANT)
         }
         val parsed = ParsedTransaction(
             sourceId = message.sourceId,
@@ -50,16 +58,18 @@ class FinancialMessageParser {
             money = amountResult.money,
             direction = directionResult.direction,
             kind = kind,
-            category = categorize(text, kind),
+            category = category,
             merchant = merchant,
             accountHint = ACCOUNT_HINT.find(text)?.groupValues?.get(1),
             confidence = confidence(reviewReasons, merchant),
             parserVersion = version,
             // Conflicting monetary facts stay visible but cannot affect totals before confirmation.
             detectedIncludedInSpend = reviewReasons.none {
-                it == ReviewReason.CONFLICTING_AMOUNTS || it == ReviewReason.CONFLICTING_DIRECTIONS
+                it == TransactionReviewReason.CONFLICTING_AMOUNTS ||
+                    it == TransactionReviewReason.CONFLICTING_DIRECTIONS
             } && directionResult.direction == TransactionDirection.DEBIT &&
                 kind in setOf(TransactionKind.PURCHASE, TransactionKind.FEE),
+            reviewReasons = reviewReasons,
         )
         return if (reviewReasons.isEmpty()) ParseOutcome.Accepted(parsed)
         else ParseOutcome.NeedsReview(parsed, reviewReasons)
@@ -150,19 +160,16 @@ class FinancialMessageParser {
         else -> TransactionKind.UNKNOWN
     }
 
-    private fun categorize(text: String, kind: TransactionKind): SpendCategory {
-        if (kind == TransactionKind.FEE) return SpendCategory.FEES_AND_CHARGES
-        return CATEGORY_RULES.firstOrNull { (pattern, _) -> pattern.containsMatchIn(text) }?.second
-            ?: SpendCategory.OTHER
-    }
-
     private fun extractMerchant(text: String): String? {
         val merchant = MERCHANT.find(text)?.groups?.get(1)?.value ?: return null
         return merchant.trim(' ', '.', ',', '-').takeIf { it.length >= 2 }?.take(MAX_MERCHANT_LENGTH)
     }
 
-    private fun confidence(reasons: Set<ReviewReason>, merchant: String?): Double = when {
-        reasons.any { it == ReviewReason.CONFLICTING_AMOUNTS || it == ReviewReason.CONFLICTING_DIRECTIONS } -> 0.35
+    private fun confidence(reasons: Set<TransactionReviewReason>, merchant: String?): Double = when {
+        reasons.any {
+            it == TransactionReviewReason.CONFLICTING_AMOUNTS ||
+                it == TransactionReviewReason.CONFLICTING_DIRECTIONS
+        } -> 0.35
         reasons.isNotEmpty() -> 0.60
         merchant == null -> 0.78
         else -> 0.90
@@ -193,7 +200,7 @@ class FinancialMessageParser {
     private data class DirectionResult(val direction: TransactionDirection, val conflicting: Boolean)
 
     private companion object {
-        const val PARSER_VERSION = 2
+        const val PARSER_BASE_VERSION = 2
         const val MAX_MERCHANT_LENGTH = 80
 
         val AMOUNT_TOKEN = Regex("(?i)(?<![A-Z0-9])(INR|Rs\\.?|₹|USD|\\$|EUR|€|GBP|£|JPY|¥|AUD|CAD)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)")
@@ -213,18 +220,5 @@ class FinancialMessageParser {
         val PURCHASE_WORDS = Regex("(?i)\\b(?:spent|paid|purchase|purchased|debited|charged|txn|transaction|upi payment)\\b")
         val DEBIT_WORDS = Regex("(?i)\\b(?:debited|spent|paid|purchase|purchased|withdrawn|sent|transferred|charged)\\b")
         val CREDIT_WORDS = Regex("(?i)\\b(?:credited|received|deposited|refunded|reversed)\\b")
-        val CATEGORY_RULES = listOf(
-            Regex("(?i)\\b(?:swiggy|zomato|restaurant|cafe|coffee|dining)\\b") to SpendCategory.FOOD_AND_DINING,
-            Regex("(?i)\\b(?:bigbasket|blinkit|zepto|grocery|groceries|supermarket)\\b") to SpendCategory.GROCERIES,
-            Regex("(?i)\\b(?:uber|ola|metro|fuel|petrol|diesel|rapido)\\b") to SpendCategory.TRANSPORT,
-            Regex("(?i)\\b(?:amazon|flipkart|myntra|shopping|retail)\\b") to SpendCategory.SHOPPING,
-            Regex("(?i)\\b(?:electricity|broadband|recharge|utility|mobile bill|water bill)\\b") to SpendCategory.BILLS_AND_UTILITIES,
-            Regex("(?i)\\b(?:rent|housing|maintenance)\\b") to SpendCategory.HOUSING,
-            Regex("(?i)\\b(?:hospital|pharmacy|medical|medicine|clinic)\\b") to SpendCategory.HEALTH,
-            Regex("(?i)\\b(?:cinema|movie|gaming|bookmyshow)\\b") to SpendCategory.ENTERTAINMENT,
-            Regex("(?i)\\b(?:hotel|flight|airline|makemytrip|goibibo|travel)\\b") to SpendCategory.TRAVEL,
-            Regex("(?i)\\b(?:school|college|course|tuition|education)\\b") to SpendCategory.EDUCATION,
-            Regex("(?i)\\b(?:netflix|spotify|hotstar|subscription)\\b") to SpendCategory.SUBSCRIPTIONS,
-        )
     }
 }

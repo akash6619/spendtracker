@@ -49,16 +49,16 @@ Currently contains:
 - `ImportPolicy`
 - `SourceMessage`, `Money`, `ParsedTransaction`, and enums
 - `FinancialMessageParser` and explicit accepted/review/rejected outcomes
+- versioned `TransactionCategorizer`, `MerchantNormalizer`, and merchant-rule model
 - `MessageSource` platform-boundary contract
 - `TransactionRepository` observable read/upsert/edit/delete contract
 - `ImportCoordinator`, durable `ImportState`, and import repository contracts
-- Room 3 KMP entities, DAOs, database, repositories, version-2 schema, and migration
+- Room 3 KMP entities, DAOs, database, repositories, version-3 schema, and migrations
 - Android, JVM, and iOS database builders using bundled SQLite
 - portable host-side tests
 
 Target additions:
 
-- category rules and user/merchant override policy
 - inclusion policy
 - date-range aggregation with injected clock/time zone
 - additional controlled parser-template expansion as real coverage evidence grows

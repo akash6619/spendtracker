@@ -21,8 +21,8 @@ slice begins.
 | MVP-02 | Local database and idempotent repository | Complete | MVP-01 | Parsed transactions survive restart and cannot duplicate |
 | MVP-03 | Production import lifecycle | Complete | MVP-02 | Clear onboarding and durable three-month import/retry status |
 | MVP-04 | Detection and parser hardening | Complete | MVP-02 | Supported messages become explainable, well-tested records |
-| MVP-05 | Categorization and override rules | Ready | MVP-04 | Basic buckets are reliable and corrections persist |
-| MVP-06 | Transaction list, filters, and detail/edit | Planned | MVP-03, MVP-05 | Users can inspect and correct the ledger |
+| MVP-05 | Categorization and override rules | Complete | MVP-04 | Basic buckets are reliable and corrections persist |
+| MVP-06 | Transaction list, filters, and detail/edit | Ready | MVP-03, MVP-05 | Users can inspect and correct the ledger |
 | MVP-07 | Weekly and monthly dashboard | Planned | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Planned | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Planned | MVP-06, MVP-08 | Users control access, data, and currency explanations |
@@ -243,7 +243,7 @@ Remote models, inbox export, or automatic FX conversion.
 
 ## MVP-05 — Categorization and override rules
 
-**Status:** Planned  
+**Status:** Complete
 **Depends on:** MVP-04
 
 ### Goal
@@ -263,18 +263,18 @@ durable correction behavior available to later UI.
 
 ### Acceptance criteria
 
-- [ ] Every accepted transaction has exactly one detected category.
-- [ ] Fee kind takes precedence over merchant keyword categorization.
-- [ ] Explicit transaction override wins over merchant and built-in rules.
-- [ ] User-approved merchant rule applies to future/reparsed matching merchants.
-- [ ] Deleting a merchant rule does not erase per-transaction overrides.
-- [ ] Category changes produce correct repository query results.
+- [x] Every accepted transaction has exactly one detected category.
+- [x] Fee kind takes precedence over merchant keyword categorization.
+- [x] Explicit transaction override wins over merchant and built-in rules.
+- [x] User-approved merchant rule applies to future/reparsed matching merchants.
+- [x] Deleting a merchant rule does not erase per-transaction overrides.
+- [x] Category changes produce correct repository query results.
 
 ### Test gate
 
-- [ ] Shared table-driven category and precedence tests.
-- [ ] Repository tests for override persistence and merchant-rule lifecycle.
-- [ ] Regression tests for keyword collisions and `Other` fallback.
+- [x] Shared table-driven category and precedence tests.
+- [x] Repository tests for override persistence and merchant-rule lifecycle.
+- [x] Regression tests for keyword collisions and `Other` fallback.
 
 ### Not in this slice
 

@@ -238,7 +238,7 @@ bounded transaction batch before requesting the next row.
 
 ### 6.3 Parser
 
-`FinancialMessageParser` is deterministic shared code. Version 2 returns an
+`FinancialMessageParser` is deterministic shared code. Version 3 returns an
 explicit `Accepted`, `NeedsReview`, or `Rejected` outcome. For each message it:
 
 1. normalizes whitespace;
@@ -247,7 +247,7 @@ explicit `Accepted`, `NeedsReview`, or `Rejected` outcome. For each message it:
 4. classifies purchase, transfer, withdrawal, refund, fee, or unknown;
 5. detects debit or credit direction;
 6. extracts a merchant and account hint when possible;
-7. applies ordered keyword category rules;
+7. normalizes the extracted merchant and delegates to `TransactionCategorizer`;
 8. assigns confidence, review/rejection reasons, and parser version.
 
 Accepted and reviewable outcomes carry a `ParsedTransaction`; rejected outcomes
@@ -256,10 +256,25 @@ rejection to `null`, but the importer uses the explicit outcome. Conflicting
 amounts/directions, unknown kinds, and purchase messages without merchants are
 persisted as reviewable; conflicting monetary facts default to excluded from
 totals until confirmation. Aggregate rejection-reason
-counts live only in the current `ImportProgress`; Room v2 persists total rejected
-count and parser version, not a per-reason map.
+counts live only in the current `ImportProgress`; Room v3 persists total rejected
+count, parser version, and coarse per-transaction review reasons, not aggregate
+per-rejection-reason counts.
 
-### 6.4 Fingerprinter
+### 6.4 Categorization and merchant rules
+
+`MerchantNormalizer` converts only the extracted merchant into a stable uppercase,
+punctuation-free key and removes common payment/legal suffixes. It never receives
+the SMS sender or raw body. `TransactionCategorizer` applies versioned built-in
+rules across the thirteen fixed buckets; fee kind has first priority and unmatched
+merchants fall back to `Other`.
+
+`RoomTransactionRepository` loads approved rules once per import batch and checks
+each normalized key during import or reparse. The resulting precedence
+is explicit transaction override, approved merchant rule, built-in category, then
+`Other`. Rule creation/deletion is exposed through the repository for later MVP-06
+UI; deletion never modifies a transaction override.
+
+### 6.5 Fingerprinter
 
 `AndroidSourceFingerprinter` normalizes sender, timestamp, and body, separates
 them with NUL characters, and computes HMAC-SHA256 using a non-exportable key in
@@ -269,7 +284,7 @@ The digest supports deduplication without storing the message body. It is keyed
 rather than a plain hash because financial messages can be predictable. Full
 local deletion first clears stored rows and then deletes this key.
 
-### 6.5 Import coordinator
+### 6.6 Import coordinator
 
 `ImportCoordinator` is the shared orchestration layer introduced by MVP-03. It
 joins the message source, parser, fingerprinter, transaction repository, import-
@@ -297,7 +312,7 @@ The transaction repository's idempotent upsert makes retries and reconciliation
 overlap safe. Counts before and after a batch report how many new ledger rows
 were actually saved.
 
-### 6.6 Sequence for a successful scan
+### 6.7 Sequence for a successful scan
 
 ```mermaid
 sequenceDiagram
@@ -612,14 +627,12 @@ Implemented now:
 - observable dashboard/list UI and debug demo mode;
 - durable status, safe progress, cancellation/retry, and permission recovery UI;
 - bounded `ImportCoordinator` with foreground reconciliation overlap;
-- `AppStateDao`, `RoomImportStateRepository`, and tested version-2 migration;
+- `AppStateDao`, `RoomImportStateRepository`, and tested version-3 migration chain;
 - injectable calendar history cutoff;
 - unit, Compose, Room, integration, migration, and Keystore tests.
 
 Important planned work:
 
-- MVP-05: versioned categorization and merchant override rules;
-- MVP-05: category and inclusion correction workflows;
 - MVP-06: filters and transaction detail/edit;
 - MVP-07: weekly/monthly and category aggregates;
 - MVP-08: live SMS receipt plus foreground reconciliation;

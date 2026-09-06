@@ -16,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
         MerchantCategoryRuleEntity::class,
         SettingsEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @ConstructedBy(SpendTrackerDatabaseConstructor::class)
@@ -30,6 +30,7 @@ import kotlinx.coroutines.Dispatchers
 abstract class SpendTrackerDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun appStateDao(): AppStateDao
+    abstract fun merchantCategoryRuleDao(): MerchantCategoryRuleDao
 }
 
 @Suppress("NO_ACTUAL_FOR_EXPECT")
@@ -42,6 +43,7 @@ fun RoomDatabase.Builder<SpendTrackerDatabase>.buildSpendTrackerDatabase(): Spen
     // Bundled SQLite keeps behavior consistent across Android, JVM tests, and iOS.
     setDriver(BundledSQLiteDriver())
         .addMigrations(MIGRATION_1_2)
+        .addMigrations(MIGRATION_2_3)
         .setQueryCoroutineContext(Dispatchers.Default)
         .build()
 
@@ -55,6 +57,13 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         connection.execute("ALTER TABLE import_state ADD COLUMN lastSavedCount INTEGER NOT NULL DEFAULT 0")
         connection.execute("ALTER TABLE import_state ADD COLUMN failureCode TEXT DEFAULT NULL")
         connection.execute("ALTER TABLE settings ADD COLUMN smsPermissionRequested INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/** Adds privacy-safe durable review reasons so category-only uncertainty can be resolved. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override suspend fun migrate(connection: SQLiteConnection) {
+        connection.execute("ALTER TABLE transactions ADD COLUMN reviewReasons TEXT NOT NULL DEFAULT ''")
     }
 }
 

@@ -26,7 +26,7 @@ enum class ImportMode {
 /**
  * Safe counters emitted while an import is running.
  * It contains no sender, body, amount, timestamp, or source identifier. Reason
- * counts are attempt-local aggregate diagnostics and are not stored in Room v2.
+ * counts are attempt-local aggregate diagnostics and are not stored in Room v3.
  */
 data class ImportProgress(
     val scannedMessages: Int = 0,

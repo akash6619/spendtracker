@@ -1,6 +1,7 @@
 package com.spendtracker.core.parser
 
 import com.spendtracker.core.model.ParsedTransaction
+import com.spendtracker.core.model.TransactionReviewReason
 
 /**
  * Privacy-safe explanations for messages the parser does not turn into ledger records.
@@ -21,10 +22,6 @@ enum class RejectionReason {
  * user can inspect and correct it later. Reasons are deliberately coarse and safe
  * for aggregate diagnostics; raw source text never crosses this boundary.
  */
-enum class ReviewReason {
-    CONFLICTING_AMOUNTS, CONFLICTING_DIRECTIONS, UNKNOWN_KIND, MISSING_MERCHANT,
-}
-
 /**
  * Complete result of classifying one ephemeral source message.
  *
@@ -38,7 +35,10 @@ sealed interface ParseOutcome {
     data class Accepted(val transaction: ParsedTransaction) : ParseOutcome
 
     /** A completed event retained for later user confirmation with one or more safe reasons. */
-    data class NeedsReview(val transaction: ParsedTransaction, val reasons: Set<ReviewReason>) : ParseOutcome
+    data class NeedsReview(
+        val transaction: ParsedTransaction,
+        val reasons: Set<TransactionReviewReason>,
+    ) : ParseOutcome
 
     /** An unsupported, incomplete, or non-financial message that must not enter the ledger. */
     data class Rejected(val reason: RejectionReason) : ParseOutcome

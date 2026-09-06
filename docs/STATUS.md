@@ -1,8 +1,8 @@
 # Current status
 
-- Last updated: 2026-09-05
-- Current milestone: MVP-04 detection and parser hardening complete
-- Next recommended slice: MVP-05 categorization and override rules
+- Last updated: 2026-09-06
+- Current milestone: MVP-05 categorization and override rules complete
+- Next recommended slice: MVP-06 transaction list, filters, and detail/edit
 - Active work: None
 
 ## Active work
@@ -11,7 +11,7 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 | Slice | Agent/task | Files or area | Started | Notes |
 | --- | --- | --- | --- | --- |
-| None | — | — | — | MVP-04 review fixes complete; MVP-05 is ready |
+| None | — | — | — | MVP-05 review fixes complete; MVP-06 is ready |
 
 ## Implemented now
 
@@ -23,8 +23,8 @@ Agents must claim work here before implementation and clear the row at handoff.
 - Immutable `AppUiState` driven by a constructor-injected `AppViewModel`.
 - Shared `MessageSource` and durable `TransactionRepository` contracts.
 - Room 3 KMP database with bundled SQLite and Android, JVM, and iOS builders.
-- Version-2 schema for transactions, import state, settings, and merchant rules,
-  with exported JSON fixtures and a tested version-1-to-version-2 migration.
+- Version-3 schema for transactions, review reasons, import state, settings, and
+  merchant rules, with exported JSON fixtures and a tested v1-to-v3 migration chain.
 - Chronological, detail, period, category-total, review, and count DAO queries.
 - Transactional provider-ID/fingerprint upsert with provider-reuse handling,
   concurrent deduplication, and user-override preservation.
@@ -53,23 +53,33 @@ Agents must claim work here before implementation and clear the row at handoff.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
 - Portable transaction/money/category models.
 - Deterministic parsing for initial INR, USD, EUR, GBP, and JPY patterns.
-- Version-2 parser outcomes explicitly distinguish accepted, needs-review, and
+- Version-3 parser outcomes explicitly distinguish accepted, needs-review, and
   rejected messages with privacy-safe reason enums.
 - India-first synthetic coverage includes card/bank debit, UPI purchase, fee,
   refund/reversal, credit, transfer, and ATM withdrawal wording.
 - Exact amount parsing supports INR aliases, Indian and international grouping,
   supported foreign currencies, malformed precision, and overflow rejection.
 - Attempt-local aggregate rejection-reason counts provide safe diagnostics; no
-  source content or identifiers are included or added to the Room v2 schema.
+  source content or identifiers are included in the Room v3 schema.
 - Conflicting amount/direction records remain visible but default to excluded
   from spend, and that detected inclusion survives Room round-trips.
 - Amount matching stops before whitespace-separated dates or references instead
   of merging their digits into the transaction amount.
+- Versioned `TransactionCategorizer` and `MerchantNormalizer` are isolated from
+  parsing and cover all thirteen fixed MVP categories with deterministic fallback.
+- Durable user-approved merchant rules apply during future/reparsed imports;
+  explicit transaction overrides remain higher priority and survive rule deletion.
+- Merchant rules cannot override fee categories, clear only category-specific
+  review uncertainty, and are loaded once per import batch rather than per row.
+- Both Room and debug repositories normalize incoming merchants before rule lookup;
+  durable review-reason enums preserve unrelated ambiguity across restarts.
+- `Other` categorization produces a review outcome without excluding an otherwise
+  valid purchase solely because its category is uncertain.
 - Initial kind, direction, merchant, account hint, category, and confidence rules.
 - Credits/refunds/transfers/ATM withdrawals excluded from spend by policy.
 - Persisted results feeding a dashboard summary and chronological transaction list.
 - No raw SMS persistence, login, backend, or internet permission.
-- Nineteen shared JVM tests, eight Android local tests, four connected Compose
+- Thirty-two shared JVM tests, nine Android local tests, four connected Compose
   tests, two connected importer/provider tests, and one connected Keystore test.
 - Minimal code comments document privacy boundaries, exact-money conversion,
   deduplication collisions, override precedence, and repository switching.
@@ -161,13 +171,34 @@ The shared parser corpus covers completed and nearby-negative synthetic card,
 bank, UPI, fee, refund, credit, transfer, and ATM messages; exact currency minor
 units; explicit rejection/review reasons; conflicting facts; normalization; and
 500 seeded malformed-input mutations. A real Room reparse regression verifies
-that parser-v2 detected fields change without erasing user overrides. Seven
+that versioned parser fields change without erasing user overrides. Seven
 connected tests passed on `SpendTracker_API_37` (API 37).
 
 The P1 review-fix pass added parser and Room regressions for excluding conflicting
 facts from totals and for stopping amount capture before whitespace-separated
 date/reference digits. Shared/JVM and Android unit tests, lint, iOS compilation,
 debug/release assembly, and all seven connected API 37 tests passed.
+
+On 2026-09-05, the MVP-05 gate completed successfully:
+
+```shell
+./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:jvmTest \
+  :androidApp:testDebugUnitTest :androidApp:lintDebug \
+  :androidApp:assembleDebug :androidApp:assembleRelease
+ANDROID_SERIAL=emulator-5554 ./gradlew :androidApp:connectedDebugAndroidTest
+```
+
+Shared tests cover all category buckets, fee/merchant collisions, normalization,
+`Other` review behavior, effective override precedence, persistent merchant-rule
+creation/deletion, reparse application, and category-total queries. Seven connected
+tests passed on the API 37 emulator; the paired OnePlus was explicitly excluded
+from instrumentation so its locally imported data remained untouched.
+
+On 2026-09-06, the MVP-05 review-hardening gate completed successfully with the
+same two commands. It added fee-precedence, resolved-review-state, normalized
+in-memory matching, parser/category version linkage, batch rule lookup, and
+version-1-to-version-3 migration regressions. Host/iOS/lint/APK checks and all
+seven emulator-only connected tests passed; no physical device was targeted.
 
 ## Known gaps
 
@@ -186,15 +217,13 @@ debug/release assembly, and all seven connected API 37 tests passed.
 
 ## Open questions
 
-These do not block starting MVP-05. Resolve them in the owning slice and record
+These do not block starting MVP-06. Resolve them in the owning slice and record
 a decision:
 
 1. Exact confidence threshold for automatic acceptance versus needs-review.
-2. Whether merchant-wide category corrections are opt-in per edit or a separate
-   explicit action.
-3. Whether the source-SMS deep link is worth exposing in MVP after privacy and
+2. Whether the source-SMS deep link is worth exposing in MVP after privacy and
    OEM-provider behavior are tested.
-4. Final Google Play declaration/distribution path for SMS permission approval.
+3. Final Google Play declaration/distribution path for SMS permission approval.
 
 ## Handoff update checklist
 

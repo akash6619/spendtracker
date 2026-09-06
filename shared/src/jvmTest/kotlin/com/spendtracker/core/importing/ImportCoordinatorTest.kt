@@ -1,6 +1,7 @@
 package com.spendtracker.core.importing
 
 import com.spendtracker.core.model.LedgerTransaction
+import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
@@ -41,7 +42,7 @@ class ImportCoordinatorTest {
         assertEquals(184, result.progress.savedTransactions)
         assertTrue(result.initialImportComplete)
         assertEquals(ImportRunStatus.COMPLETED, result.status)
-        assertEquals(2, result.parserVersion)
+        assertEquals(3, result.parserVersion)
         assertTrue(transactions.maxBatchSize <= 25)
         assertEquals(result.progress, progressUpdates.last())
     }
@@ -210,6 +211,9 @@ private class RecordingTransactionRepository : TransactionRepository {
     }
     override suspend fun getById(id: String): LedgerTransaction? = null
     override suspend fun updateOverrides(id: String, category: SpendCategory?, includedInSpend: Boolean?) = Unit
+    override fun observeMerchantRules(): Flow<List<MerchantCategoryRule>> = MutableStateFlow(emptyList())
+    override suspend fun saveMerchantRule(merchant: String, category: SpendCategory) = Unit
+    override suspend fun deleteMerchantRule(merchant: String) = Unit
     override suspend fun count(): Int = fingerprints.size
     override suspend fun clear() = fingerprints.clear()
 }

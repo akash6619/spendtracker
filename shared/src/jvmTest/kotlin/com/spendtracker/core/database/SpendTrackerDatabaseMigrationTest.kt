@@ -11,7 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Opens a literal version-1 database through the current version-2 builder.
+ * Opens a literal version-1 database through the current version-3 builder.
  * This validates both the migration SQL and Room's final schema verification
  * while confirming old completion/counter data remains intact.
  */
@@ -25,6 +25,13 @@ class SpendTrackerDatabaseMigrationTest {
                 "INSERT INTO import_state VALUES (1, 1, 7000, 12, 8, 1)",
             )
             connection.execute("INSERT INTO settings VALUES (1, 1)")
+            connection.execute(
+                """INSERT INTO transactions VALUES (
+                    'row-1', 'ANDROID_SMS', 'provider-1', 'fingerprint-1', 6000,
+                    12500, 'INR', 'DEBIT', 'PURCHASE', 'OTHER', NULL,
+                    'SYNTHETIC STORE', NULL, 0.6, 1, 1, NULL, 6000, 6000
+                )""".trimIndent(),
+            )
             connection.execute("PRAGMA user_version = 1")
         }
 
@@ -38,6 +45,7 @@ class SpendTrackerDatabaseMigrationTest {
         assertEquals(8, state.progress.recognizedTransactions)
         assertEquals(0, state.progress.rejectedMessages)
         assertFalse(repository.wasSmsPermissionRequested())
+        assertTrue(migrated.transactionDao().findById("row-1")?.reviewReasons.orEmpty().isEmpty())
         migrated.close()
         file.delete()
     }

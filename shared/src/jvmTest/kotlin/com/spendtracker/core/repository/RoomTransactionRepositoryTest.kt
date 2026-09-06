@@ -9,6 +9,7 @@ import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
+import com.spendtracker.core.model.TransactionReviewReason
 import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.parser.FinancialMessageParser
 import kotlinx.coroutines.async
@@ -27,7 +28,11 @@ class RoomTransactionRepositoryTest {
     fun persistsAcrossReopenAndDoesNotDuplicate() = runTest {
         val file = Files.createTempFile("spendtracker", ".db").toFile().apply { delete() }
         val firstDatabase = createSpendTrackerDatabase(file)
-        val firstRepository = RoomTransactionRepository(firstDatabase.transactionDao()) { 100 }
+        val firstRepository = RoomTransactionRepository(
+            firstDatabase.transactionDao(),
+            firstDatabase.merchantCategoryRuleDao(),
+            nowEpochMillis = { 100 },
+        )
         firstRepository.upsert(listOf(candidate("7", "same")))
         firstRepository.upsert(listOf(candidate("7", "same")))
         assertEquals(1, firstRepository.observeTransactions().first().size)
@@ -35,6 +40,29 @@ class RoomTransactionRepositoryTest {
 
         val reopened = createSpendTrackerDatabase(file)
         assertEquals(1, reopened.transactionDao().count())
+        reopened.close()
+        file.delete()
+    }
+
+    @Test
+    fun merchantRulePersistsAcrossDatabaseReopen() = runTest {
+        val file = Files.createTempFile("spendtracker-rules", ".db").toFile().apply { delete() }
+        val firstDatabase = createSpendTrackerDatabase(file)
+        val firstRepository = RoomTransactionRepository(
+            firstDatabase.transactionDao(),
+            firstDatabase.merchantCategoryRuleDao(),
+            nowEpochMillis = { 100 },
+        )
+        firstRepository.saveMerchantRule("Northstar Hotel", SpendCategory.TRAVEL)
+        firstDatabase.close()
+
+        val reopened = createSpendTrackerDatabase(file)
+        val reopenedRepository = RoomTransactionRepository(
+            reopened.transactionDao(),
+            reopened.merchantCategoryRuleDao(),
+            nowEpochMillis = { 200 },
+        )
+        assertEquals(SpendCategory.TRAVEL, reopenedRepository.observeMerchantRules().first().single().category)
         reopened.close()
         file.delete()
     }
@@ -83,7 +111,7 @@ class RoomTransactionRepositoryTest {
 
             val updated = repository.observeTransactions().first().single()
             assertEquals(999, updated.transaction.money.amountMinor)
-            assertEquals(2, updated.transaction.parserVersion)
+            assertEquals(3, updated.transaction.parserVersion)
             assertEquals(SpendCategory.TRAVEL, updated.effectiveCategory)
             assertFalse(updated.isIncludedInSpend)
         }
@@ -99,6 +127,60 @@ class RoomTransactionRepositoryTest {
             repository.upsert(listOf(candidate("1", "conflict", parsed = parsed)))
 
             assertFalse(repository.observeTransactions().first().single().isIncludedInSpend)
+        }
+    }
+
+    @Test
+    fun merchantRuleLifecycleRespectsTransactionOverrideAndReportingQueries() = runTest {
+        withRepository { repository, database ->
+            repository.saveMerchantRule("Northstar Cafe Pvt Ltd", SpendCategory.TRAVEL)
+            assertEquals(SpendCategory.TRAVEL, repository.observeMerchantRules().first().single().category)
+
+            repository.upsert(listOf(candidate("1", "rule", parsed = parsed("northstar-cafe pvt. ltd"))))
+            var transaction = repository.observeTransactions().first().single()
+            assertEquals(SpendCategory.TRAVEL, transaction.effectiveCategory)
+            assertEquals(SpendCategory.TRAVEL.name, database.transactionDao().categoryTotals(0, 2_000).single().category)
+
+            repository.updateOverrides(transaction.id, SpendCategory.HEALTH, null)
+            repository.upsert(listOf(candidate("1", "rule", parsed = parsed("NORTHSTAR CAFE"))))
+            transaction = repository.observeTransactions().first().single()
+            assertEquals(SpendCategory.HEALTH, transaction.effectiveCategory)
+
+            repository.deleteMerchantRule("northstar cafe")
+            assertTrue(repository.observeMerchantRules().first().isEmpty())
+            assertEquals(SpendCategory.HEALTH, repository.observeTransactions().first().single().effectiveCategory)
+
+            repository.updateOverrides(transaction.id, null, null)
+            repository.upsert(listOf(candidate("1", "rule", parsed = parsed("NORTHSTAR CAFE"))))
+            assertEquals(SpendCategory.FOOD_AND_DINING, repository.observeTransactions().first().single().effectiveCategory)
+        }
+    }
+
+    @Test
+    fun merchantRulePreservesFeeCategoryAndResolvesOtherReviewState() = runTest {
+        withRepository { repository, database ->
+            repository.saveMerchantRule("Northstar Unknown", SpendCategory.TRAVEL)
+            repository.upsert(
+                listOf(
+                    candidate("1", "other", parsed = parsed(
+                        merchant = "Northstar Unknown",
+                        category = SpendCategory.OTHER,
+                        reviewReasons = setOf(TransactionReviewReason.UNKNOWN_CATEGORY),
+                        confidence = .6,
+                    )),
+                    candidate("2", "fee", parsed = parsed(
+                        merchant = "Northstar Unknown",
+                        category = SpendCategory.FEES_AND_CHARGES,
+                        kind = TransactionKind.FEE,
+                    )),
+                ),
+            )
+
+            val rows = repository.observeTransactions().first().associateBy { it.sourceFingerprint }
+            assertEquals(SpendCategory.TRAVEL, rows.getValue("other").effectiveCategory)
+            assertTrue(rows.getValue("other").transaction.reviewReasons.isEmpty())
+            assertEquals(SpendCategory.FEES_AND_CHARGES, rows.getValue("fee").effectiveCategory)
+            assertTrue(database.transactionDao().needingReview(.75).isEmpty())
         }
     }
 
@@ -139,7 +221,14 @@ class RoomTransactionRepositoryTest {
         val file = Files.createTempFile("spendtracker", ".db").toFile().apply { delete() }
         val database = createSpendTrackerDatabase(file)
         try {
-            block(RoomTransactionRepository(database.transactionDao()) { 100 }, database)
+            block(
+                RoomTransactionRepository(
+                    database.transactionDao(),
+                    database.merchantCategoryRuleDao(),
+                    nowEpochMillis = { 100 },
+                ),
+                database,
+            )
         } finally {
             database.close()
             file.delete()
@@ -173,4 +262,24 @@ class RoomTransactionRepositoryTest {
     )
 
     private fun source(body: String) = SourceMessage("1", "SYNTHETIC", body, 1_000)
+
+    private fun parsed(
+        merchant: String,
+        category: SpendCategory = SpendCategory.FOOD_AND_DINING,
+        kind: TransactionKind = TransactionKind.PURCHASE,
+        reviewReasons: Set<TransactionReviewReason> = emptySet(),
+        confidence: Double = .9,
+    ) = ParsedTransaction(
+        sourceId = "1",
+        sourceReceivedAtEpochMillis = 1_000,
+        money = Money(500, CurrencyCode.INR),
+        direction = TransactionDirection.DEBIT,
+        kind = kind,
+        category = category,
+        merchant = merchant,
+        accountHint = null,
+        confidence = confidence,
+        parserVersion = 3,
+        reviewReasons = reviewReasons,
+    )
 }

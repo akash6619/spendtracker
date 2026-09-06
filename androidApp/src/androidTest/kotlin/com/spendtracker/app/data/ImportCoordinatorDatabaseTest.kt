@@ -44,6 +44,7 @@ class ImportCoordinatorDatabaseTest {
         try {
             val transactionRepository = RoomTransactionRepository(
                 database.transactionDao(),
+                database.merchantCategoryRuleDao(),
                 nowEpochMillis = { 5_000 },
             )
             val stateRepository = RoomImportStateRepository(database.appStateDao())

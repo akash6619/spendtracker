@@ -50,8 +50,8 @@ Android Keystore-backed local storage where practical. Never display the digest.
 
 ## Local schema
 
-Room 3 KMP implements this schema. Version-1 and version-2 JSON fixtures are exported under
-`shared/schemas` and is the baseline for future migration tests.
+Room 3 KMP implements this schema. Version-1 through version-3 JSON fixtures are
+exported under `shared/schemas` as the baseline for future migration tests.
 
 ### `transactions`
 
@@ -72,6 +72,7 @@ Room 3 KMP implements this schema. Version-1 and version-2 JSON fixtures are exp
 | `accountHint` | Optional masked last digits only |
 | `confidence` | Parser confidence/review signal |
 | `parserVersion` | Version used to produce detected fields |
+| `reviewReasons` | Comma-separated privacy-safe ambiguity enums; never message text |
 | `detectedIncluded` | Inclusion policy result |
 | `userIncluded` | Nullable explicit inclusion override |
 | `createdAt`, `updatedAt` | Local bookkeeping timestamps |
@@ -86,7 +87,8 @@ must handle history scan and live receiver races transactionally.
 
 ### Supporting data
 
-- `merchant_category_rules`: user-approved normalized merchant overrides.
+- `merchant_category_rules`: user-approved normalized merchant overrides, now
+  applied during future/reparsed imports below explicit transaction overrides.
 - `import_state`: initial import status, last successful reconciliation time,
   parser version, and counts. It must not contain message content.
 - `settings`: onboarding state and local product preferences.

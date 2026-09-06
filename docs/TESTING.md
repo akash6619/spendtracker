@@ -41,6 +41,13 @@ units, conflicting-field review cases, and 500 deterministic malformed-input
 mutations. Import tests assert privacy-safe aggregate rejection counts, and a
 Room repository test reparses detected fields while preserving user overrides.
 
+MVP-05 adds a table covering all thirteen fixed buckets, merchant normalization,
+fee precedence and keyword collisions, and `Other` review semantics. Room tests
+cover merchant-rule persistence, future/reparse application, deletion, explicit
+transaction-override precedence, and effective category reporting queries.
+They also verify durable review-reason resolution, normalized matching in both
+repository implementations, and the version-1-to-version-3 migration chain.
+
 ### Android local unit tests
 
 Cover ViewModel state transitions and Android-independent orchestration with

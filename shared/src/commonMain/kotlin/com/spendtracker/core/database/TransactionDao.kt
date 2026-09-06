@@ -60,7 +60,7 @@ interface TransactionDao {
     """)
     suspend fun periodTotal(fromInclusive: Long, toExclusive: Long): PeriodTotal
 
-    @Query("SELECT * FROM transactions WHERE confidence < :threshold OR kind = 'UNKNOWN' ORDER BY sourceReceivedAtEpochMillis DESC")
+    @Query("SELECT * FROM transactions WHERE reviewReasons != '' OR confidence < :threshold OR kind = 'UNKNOWN' ORDER BY sourceReceivedAtEpochMillis DESC")
     suspend fun needingReview(threshold: Double): List<TransactionEntity>
 
     @Query("""

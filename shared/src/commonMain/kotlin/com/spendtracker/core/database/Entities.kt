@@ -35,6 +35,7 @@ data class TransactionEntity(
     val accountHint: String?,
     val confidence: Double,
     val parserVersion: Int,
+    val reviewReasons: String = "",
     val detectedIncludedInSpend: Boolean,
     val userIncludedInSpend: Boolean?,
     val createdAtEpochMillis: Long,

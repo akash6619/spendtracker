@@ -130,5 +130,33 @@ entry that records the reason, migration impact, and affected tests.
 - Consequence: Ambiguous records remain visible with low confidence and explicit
   review reasons; conflicting amounts or directions default to excluded from
   spend until confirmed. Re-import updates detected parser-v2 fields but repository
-  upsert must preserve user overrides. Room v2 stores the parser version and
-  aggregate import totals, while per-reason counts remain attempt-local for now.
+  upsert must preserve user overrides. Room v3 stores the parser version and
+  per-transaction review reasons; aggregate rejection-reason counts remain
+  attempt-local.
+
+## D-013 — Explicit category precedence and merchant-rule application
+
+- Date: 2026-09-05
+- Status: Accepted and validated
+- Decision: Effective category precedence is transaction override, then an
+  explicitly user-approved normalized-merchant rule applied during import/reparse,
+  then versioned built-in rules, then `Other`. Merchant-wide rules are created only
+  by a separate explicit action; changing one transaction does not create a rule.
+- Reason: This keeps automatic behavior deterministic and prevents a correction
+  from unexpectedly changing other records without clear user intent.
+- Consequence: Deleting a merchant rule does not erase transaction overrides.
+  Existing detected categories change when their source is reparsed; parser output
+  advances to version 3 for the new category policy. `Other` is reviewable but does
+  not by itself exclude an otherwise valid purchase from totals.
+
+## D-014 — Persist transaction review reasons
+
+- Date: 2026-09-06
+- Status: Accepted and validated
+- Decision: Persist only coarse transaction-level review reasons as enum names.
+  A merchant rule removes `UNKNOWN_CATEGORY` while preserving unrelated ambiguity;
+  fee kind remains higher priority than every merchant rule.
+- Reason: Confidence alone cannot distinguish resolved category uncertainty from
+  unrelated amount, direction, kind, or merchant concerns after a Room round-trip.
+- Consequence: Room schema version 3 adds `reviewReasons` with an empty migration
+  default. No raw message content or identifiers are introduced.

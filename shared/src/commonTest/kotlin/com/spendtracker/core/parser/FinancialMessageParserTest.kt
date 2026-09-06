@@ -1,10 +1,12 @@
 package com.spendtracker.core.parser
 
+import com.spendtracker.core.categorization.TransactionCategorizer
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
+import com.spendtracker.core.model.TransactionReviewReason
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,6 +22,11 @@ import kotlin.test.assertTrue
  */
 class FinancialMessageParserTest {
     private val parser = FinancialMessageParser()
+
+    @Test
+    fun parserVersionIncludesCategorizationPolicyVersion() {
+        assertEquals(2 + TransactionCategorizer().version, parser.version)
+    }
 
     @Test
     fun acceptsRepresentativeIndiaFirstCompletedEvents() {
@@ -40,7 +47,7 @@ class FinancialMessageParserTest {
             assertTrue(parsed != null, case.body)
             assertEquals(case.kind, parsed.kind, case.body)
             assertEquals(case.included, parsed.isIncludedInSpend, case.body)
-            assertEquals(2, parsed.parserVersion)
+            assertEquals(3, parsed.parserVersion)
         }
     }
 
@@ -99,14 +106,20 @@ class FinancialMessageParserTest {
         val amountConflict = assertIs<ParseOutcome.NeedsReview>(
             parser.classify(message("INR 500 debited and INR 400 credited at NORTHSTAR")),
         )
-        assertTrue(ReviewReason.CONFLICTING_AMOUNTS in amountConflict.reasons)
-        assertTrue(ReviewReason.CONFLICTING_DIRECTIONS in amountConflict.reasons)
+        assertTrue(TransactionReviewReason.CONFLICTING_AMOUNTS in amountConflict.reasons)
+        assertTrue(TransactionReviewReason.CONFLICTING_DIRECTIONS in amountConflict.reasons)
         assertFalse(amountConflict.transaction.isIncludedInSpend)
 
         val missingMerchant = assertIs<ParseOutcome.NeedsReview>(
             parser.classify(message("INR 500 purchase completed")),
         )
-        assertEquals(setOf(ReviewReason.MISSING_MERCHANT), missingMerchant.reasons)
+        assertEquals(
+            setOf(
+                TransactionReviewReason.MISSING_MERCHANT,
+                TransactionReviewReason.UNKNOWN_CATEGORY,
+            ),
+            missingMerchant.reasons,
+        )
     }
 
     @Test

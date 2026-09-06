@@ -1,6 +1,7 @@
 package com.spendtracker.core.repository
 
 import com.spendtracker.core.model.LedgerTransaction
+import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,12 @@ interface TransactionRepository {
         category: SpendCategory?,
         includedInSpend: Boolean?,
     )
+
+    fun observeMerchantRules(): Flow<List<MerchantCategoryRule>>
+
+    suspend fun saveMerchantRule(merchant: String, category: SpendCategory)
+
+    suspend fun deleteMerchantRule(merchant: String)
 
     suspend fun count(): Int
 

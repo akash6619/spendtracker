@@ -85,6 +85,21 @@ enum class SpendCategory {
 }
 
 /**
+ * Durable, privacy-safe reasons that a parsed transaction needs user confirmation.
+ *
+ * Values describe only detected ambiguity and contain no SMS text or identifiers.
+ * Persisting them lets category rules resolve category-only uncertainty without
+ * accidentally hiding unrelated amount, direction, kind, or merchant concerns.
+ */
+enum class TransactionReviewReason {
+    CONFLICTING_AMOUNTS,
+    CONFLICTING_DIRECTIONS,
+    UNKNOWN_KIND,
+    UNKNOWN_CATEGORY,
+    MISSING_MERCHANT,
+}
+
+/**
  * Structured financial fields inferred from one recognized source message.
  *
  * This model contains no raw body or sender. It records the parser's detected
@@ -104,6 +119,7 @@ data class ParsedTransaction(
     val parserVersion: Int,
     val detectedIncludedInSpend: Boolean = direction == TransactionDirection.DEBIT &&
         kind in setOf(TransactionKind.PURCHASE, TransactionKind.FEE),
+    val reviewReasons: Set<TransactionReviewReason> = emptySet(),
 ) {
     init {
         require(confidence in 0.0..1.0) { "Confidence must be between 0 and 1" }

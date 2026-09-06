@@ -20,7 +20,11 @@ import com.spendtracker.core.repository.RoomTransactionRepository
 class SpendTrackerApplication : Application() {
     val database by lazy { createSpendTrackerDatabase(this) }
     val repository by lazy {
-        RoomTransactionRepository(database.transactionDao(), System::currentTimeMillis)
+        RoomTransactionRepository(
+            database.transactionDao(),
+            database.merchantCategoryRuleDao(),
+            System::currentTimeMillis,
+        )
     }
     val importStateRepository by lazy { RoomImportStateRepository(database.appStateDao()) }
     val fingerprinter by lazy { AndroidSourceFingerprinter() }
