@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +36,6 @@ fun SettingsScreen(
     state: AppUiState,
     onRequestPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
-    onScanMessages: () -> Unit,
     onCancelImport: () -> Unit,
     onLeaveDemoData: () -> Unit,
     modifier: Modifier = Modifier,
@@ -124,14 +124,11 @@ fun SettingsScreen(
                     Text(stringResource(R.string.action_cancel_import))
                 }
             } else if (state.permission == PermissionUiState.GRANTED) {
-                Button(
-                    onClick = onScanMessages,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.SCAN_MESSAGES),
-                ) {
-                    Text(stringResource(R.string.action_check_new_messages))
-                }
+                Text(
+                    stringResource(R.string.sms_auto_pickup),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             } else if (state.permission == PermissionUiState.NOT_REQUESTED ||
                 state.permission == PermissionUiState.DENIED
             ) {
@@ -190,7 +187,6 @@ private fun SettingsContentPreview() {
             ),
             onRequestPermission = {},
             onOpenAppSettings = {},
-            onScanMessages = {},
             onCancelImport = {},
             onLeaveDemoData = {},
         )

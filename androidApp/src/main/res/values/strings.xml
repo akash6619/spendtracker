@@ -23,7 +23,6 @@
     <string name="action_try_permission_again">Try permission again</string>
     <string name="action_open_settings">Open app settings</string>
     <string name="action_scan_messages">Scan last 3 months</string>
-    <string name="action_check_new_messages">Check for new messages</string>
     <string name="action_cancel_import">Cancel import</string>
     <string name="action_try_again">Try scan again</string>
     <string name="action_explore_demo">Explore with demo data</string>
@@ -82,6 +81,7 @@
     <string name="settings_subtitle">Local data and SMS access</string>
     <string name="sms_access_title">SMS access</string>
     <string name="sms_access_granted">Granted</string>
+    <string name="sms_auto_pickup">New financial messages are picked up automatically each time you open the app.</string>
     <string name="sms_access_required">Not granted</string>
     <string name="local_only_title">Local-only MVP</string>
     <string name="local_only_body">No account, backend, analytics, or internet permission is used. Parsed transactions are stored only on this device; SMS bodies are not saved.</string>

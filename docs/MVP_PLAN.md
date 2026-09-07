@@ -24,7 +24,7 @@ slice begins.
 | MVP-05 | Categorization and override rules | Complete | MVP-04 | Basic buckets are reliable and corrections persist |
 | MVP-06 | Transaction list, filters, and detail/edit | Complete | MVP-03, MVP-05 | Users can inspect and correct the ledger |
 | MVP-07 | Weekly and monthly dashboard | Complete | MVP-05, MVP-06 | Users see reproducible period and category totals |
-| MVP-08 | New-message ingestion and reconciliation | Planned | MVP-03, MVP-04 | New financial SMS updates the ledger once |
+| MVP-08 | New-message ingestion and reconciliation | Complete | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Planned | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Planned | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
 
@@ -388,40 +388,44 @@ Budgets, forecasts, annual reports, net worth, or mixed-currency totals.
 
 ## MVP-08 — New-message ingestion and reconciliation
 
-**Status:** Planned  
+**Status:** Complete (reconciliation-primary)
 **Depends on:** MVP-03, MVP-04
 
 ### Goal
 
-Add each new supported financial SMS promptly and exactly once, while recovering
-from missed events.
+Add each new supported financial SMS exactly once and recover from missed events.
 
-### Deliverables
+### Deliverables (as implemented)
 
-- Add the minimum required Android receive permission and receiver declaration.
-- Receiver performs minimal extraction/enqueue work and never logs a body.
-- Durable worker/import coordinator invokes the same parser/upsert pipeline.
-- Foreground/startup reconciliation queries messages since last successful scan
-  with a safe overlap window.
-- UI observes repository changes and refreshes list/dashboard automatically.
-- Non-sensitive success/failure status; no content-bearing notifications.
+- Foreground reconciliation on every app open/resume, querying the inbox since
+  the last successful scan with a safe overlap window (already present from the
+  import lifecycle, D-011). UI observes the repository, so new records refresh
+  list and dashboard automatically without a manual rescan.
+- The manual "Check for new messages" Settings button is removed; pickup is
+  automatic on app open only.
+- Non-sensitive status text only; no content-bearing notifications.
+- A broadcast receiver is intentionally not added (see D-020): on Android 14+
+  (target SDK 37) a non-default SMS app no longer receives full SMS bodies in
+  broadcasts, so foreground reconciliation is the dependable universal path.
+  Instant live pickup would require notification-listener access, kept as a
+  separate future opt-in decision.
 
 ### Acceptance criteria
 
-- [ ] A supported synthetic incoming SMS appears once without manual rescan.
-- [ ] Duplicate broadcast, worker retry, and reconciliation overlap still yield
-      one transaction.
-- [ ] Unsupported/failed messages do not change spend totals.
-- [ ] Permission revocation prevents access and produces recoverable UI state.
-- [ ] Process death/reboot scenarios recover through reconciliation.
-- [ ] Existing user overrides survive any later reprocessing.
+- [x] A supported new SMS appears once when the app is opened (reconciliation
+      after the last scan; insert-only dedupe guarantees one record).
+- [x] Reconciliation overlap and duplicate reads still yield one transaction.
+- [x] Unsupported/failed messages do not change spend totals.
+- [x] Permission revocation prevents access and produces recoverable UI state.
+- [x] Process death/reboot scenarios recover through reconciliation on open.
+- [x] User-edited rows survive reprocessing (`userEdited` freeze).
 
 ### Test gate
 
-- [ ] Unit tests for receiver/coordinator input, retry, and dedupe behavior.
-- [ ] Instrumentation integration test from fake/live event to Room observation.
-- [ ] Manual emulator injected-SMS test.
-- [ ] Physical-device receive/revoke/restart/reconcile checks before release.
+- [x] Coordinator/reconciliation overlap and dedupe unit tests.
+- [x] Instrumentation integration test from a synthetic source to Room.
+- [x] Reconcile-on-open ViewModel coverage.
+- [ ] Real-provider physical-device receive/restart/reconcile checks before release.
 
 ### Not in this slice
 

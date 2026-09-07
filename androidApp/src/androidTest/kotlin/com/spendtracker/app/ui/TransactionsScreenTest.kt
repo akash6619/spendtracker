@@ -29,7 +29,7 @@ class TransactionsScreenTest {
         compose.onNodeWithText("Filters").performClick()
         compose.onNodeWithText("Currency: All").performScrollTo().performClick()
         compose.onNodeWithText("JPY").performClick()
-        compose.onNodeWithText("Spend inclusion: All").performScrollTo().performClick()
+        compose.onNodeWithText("Spend: All").performScrollTo().performClick()
         compose.onNodeWithText("Excluded from spend").performClick()
         compose.onNodeWithText("Apply filters").performClick()
         compose.onNodeWithText("No matching transactions").assertIsDisplayed()

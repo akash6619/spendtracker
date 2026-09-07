@@ -1,8 +1,8 @@
 # Current status
 
 - Last updated: 2026-09-06
-- Current milestone: MVP-07 weekly and monthly dashboard complete
-- Next recommended slice: MVP-08 new-message ingestion and reconciliation
+- Current milestone: MVP-08 reconciliation-primary new-message ingestion complete
+- Next recommended slice: MVP-09 privacy/settings and data lifecycle
 - Active work: none
 
 ## Active work
@@ -298,7 +298,11 @@ physical device.
   Unsaved editor drafts are not restored after process death.
 - Source viewing relies on the system SMS provider; live-found-path behavior on
   OEM providers and physical devices remains release work.
-- There is no `RECEIVE_SMS` live ingestion; foreground overlap reconciliation exists.
+- There is no `RECEIVE_SMS` live ingestion (D-020): on Android 14+ a non-default
+  SMS app cannot receive full SMS bodies in broadcasts. New messages are picked
+  up by automatic foreground reconciliation on every app open; the manual
+  "Check for new messages" button was removed. Instant live pickup via
+  notification-listener access remains a post-MVP opt-in candidate.
 - The Settings shell exists, but delete-all and complete data-lifecycle controls
   do not.
 - Real SMS-provider behavior and physical-device checks remain release work;

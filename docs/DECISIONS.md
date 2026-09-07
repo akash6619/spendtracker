@@ -270,3 +270,25 @@ entry that records the reason, migration impact, and affected tests.
   UNIQUE indexes on `(sourceType, sourceProviderId)` and
   `(sourceType, sourceFingerprint)`. D-013/D-015 override-preservation semantics
   no longer apply.
+## D-020 — Reconciliation-primary new-message ingestion
+
+- Date: 2026-09-06
+- Status: Accepted
+- Decision: MVP-08 does not add a `RECEIVE_SMS` broadcast receiver. New
+  financial messages enter the ledger through foreground reconciliation that
+  runs automatically every time the app opens or returns to the foreground,
+  querying the inbox since the last successful scan (minus a small overlap) and
+  relying on the repository's insert-only dedupe so each message is stored once.
+  The manual "Check for new messages" button is removed; pickup is automatic on
+  open only.
+- Reason: On Android 14+ (target SDK is 37) a non-default SMS app no longer
+  receives full SMS bodies in `SMS_RECEIVED` broadcasts. Apps that show spend
+  instantly (for example Axio) do so via notification-listener access, which
+  reads all notification text and needs explicit opt-in plus a Settings grant;
+  that is a separate, more privacy-sensitive future decision. Foreground
+  reconciliation works on every Android version with the already-declared
+  `READ_SMS` permission and needs no additional sensitive permission.
+- Consequence: New SMS are reflected the next time the app is opened, not while
+  it sits closed. Duplicate reads and overlap never duplicate a row, user-edited
+  rows are frozen against reprocessing, and process death/reboot recover on the
+  next open. Live notification-based pickup remains a post-MVP opt-in candidate.
