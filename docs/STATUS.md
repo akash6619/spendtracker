@@ -1,8 +1,10 @@
 # Current status
 
 - Last updated: 2026-09-06
-- Current milestone: MVP-09 privacy/settings and data lifecycle complete
-- Next recommended slice: MVP-10 hardening and controlled-release gate
+- Current milestone: MVP plan feature-complete (MVP-10 gate done; external
+  physical-device and Google Play review remain before public distribution)
+- Next recommended slice: none (all MVP slices complete). Public release requires
+  the external steps in MVP-10's remaining items.
 - Active work: none
 
 ## Active work
@@ -127,6 +129,12 @@ Agents must claim work here before implementation and clear the row at handoff.
   and fingerprint key after confirmation and returns to onboarding; revoking
   access is explained as the separate non-destructive action. Manifest audit:
   `READ_SMS` only, backup disabled, no `INTERNET`, no network/analytics deps.
+- Release gate (MVP-10): optional release signing via git-ignored
+  `keystore.properties`; release variant has no demo repository; no `Log` or
+  analytics calls exist. Release material added (`SIGNING_RELEASE.md`,
+  `STORE_LISTING_AND_PRIVACY.md`, `SMS_PERMISSIONS_DECLARATION.md`). Automated
+  10k-message import is bounded with zero duplicates. Merged release manifest:
+  `READ_SMS` only, `allowBackup=false`, no `INTERNET`.
 - Sixty shared JVM tests, twenty-four Android local tests, fourteen connected
   Compose tests, two connected importer/provider tests, and one connected
   Keystore test.
@@ -299,6 +307,27 @@ tests (fourteen Compose), and lint/debug/release assembly. Manual checks on the
 emulator confirmed the dialog and its permission-revoked explanation; the
 live-found path with a real provider row remains release validation on a
 physical device.
+
+On 2026-09-06, the MVP-10 gate completed its code and material deliverables:
+
+```shell
+./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:jvmTest \
+  :androidApp:testDebugUnitTest :androidApp:lintDebug \
+  :androidApp:assembleDebug :androidApp:assembleRelease
+ANDROID_SERIAL=emulator-5554 ./gradlew :androidApp:connectedDebugAndroidTest
+```
+
+Result: sixty shared tests, twenty-eight Android unit tests, and twenty-three
+connected tests (Compose, importer/provider, Keystore, source lookup) all pass
+on the API 37 emulator. The 10,000-message import coverage remains bounded
+(write batches ≤ 100) with zero duplicates. Delete-all and process-death paths
+were verified on the emulator, and a 150% font-scale pass succeeded on primary
+paths. The merged release manifest declares `READ_SMS` only, disables backup,
+and contains no `INTERNET`. No raw SMS or sensitive identifiers appeared in
+Logcat or fixtures. Remaining before public distribution: physical
+phone/OEM-provider validation (including a real incoming financial SMS) and the
+Google Play restricted-SMS permission declaration review; these are external
+and release-blocking.
 
 ## Known gaps
 

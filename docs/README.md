@@ -22,6 +22,9 @@ and handoff work.
 | [`TESTING.md`](TESTING.md) | Test pyramid, fixtures, commands, and release matrix |
 | [`DEVELOPMENT.md`](DEVELOPMENT.md) | Local setup, emulator workflow, and coding conventions |
 | [`DECISIONS.md`](DECISIONS.md) | Accepted architecture and product decisions |
+| [`SIGNING_RELEASE.md`](SIGNING_RELEASE.md) | Release signing setup and pre-release checklist |
+| [`STORE_LISTING_AND_PRIVACY.md`](STORE_LISTING_AND_PRIVACY.md) | Store copy and privacy policy draft |
+| [`SMS_PERMISSIONS_DECLARATION.md`](SMS_PERMISSIONS_DECLARATION.md) | Google Play restricted-SMS declaration material |
 
 ## Maintenance rule
 

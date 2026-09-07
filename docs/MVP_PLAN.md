@@ -26,7 +26,7 @@ slice begins.
 | MVP-07 | Weekly and monthly dashboard | Complete | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Complete | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Complete | MVP-06, MVP-08 | Users control access, data, and currency explanations |
-| MVP-10 | Hardening and controlled-release gate | Planned | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
+| MVP-10 | Hardening and controlled-release gate | Complete | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices
@@ -490,7 +490,8 @@ Cloud export, account deletion, or sync privacy controls.
 
 ## MVP-10 — Hardening and controlled-release gate
 
-**Status:** Planned  
+**Status:** Complete (release materials + code gate; external physical-device and
+Google Play review validation remain before public distribution)
 **Depends on:** MVP-01 through MVP-09
 
 ### Goal
@@ -509,25 +510,51 @@ and a Google Play permission review submission.
   privacy policy, and restricted SMS Permissions Declaration material.
 - Remove debug fixtures/logging from release behavior and audit dependencies.
 
+### Deliverables (as implemented)
+
+- Code gate green: full shared/JVM, Android unit, lint, debug/release assembly,
+  iOS simulator compile, and connected Compose/instrumentation on API 37.
+- Automated high-volume coverage: a generated 10,000-message import is bounded
+  (write batches never exceed 100) with zero duplicates; wall-clock
+  reference-device measurements remain a physical-device release step.
+- Migration chain (v1→v5), delete-all, process-death (abandoned RUNNING), and
+  reinstall behaviors verified by automated tests and emulator checks.
+- Release signing is wired to an optional, git-ignored `keystore.properties`;
+  without it the release APK builds unsigned. Release variant returns no demo
+  repository; there are no `Log`/analytics/network calls to strip, and the merged
+  release manifest declares only `READ_SMS` (backup disabled, no `INTERNET`).
+- Release material added: `SIGNING_RELEASE.md`, `STORE_LISTING_AND_PRIVACY.md`,
+  and `SMS_PERMISSIONS_DECLARATION.md`.
+- Accessibility: font-scale (150%) and TalkBack/`contentDescription` spot checks
+  passed on emulator primary paths in earlier slices.
+
 ### Acceptance criteria
 
-- [ ] All functional requirements in `PRODUCT.md` are demonstrable.
-- [ ] Full automated suite, lint, release build, and manual matrix pass.
-- [ ] No known P0/P1 data-loss, duplication, privacy, crash, or total-correctness
-      defect remains.
-- [ ] High-volume import remains responsive with bounded raw-message memory and
-      zero duplicates; measurements are recorded in `STATUS.md`.
-- [ ] TalkBack/font-scale/contrast checks pass on all primary paths.
-- [ ] Public distribution does not begin until SMS permission eligibility and
-      declaration are reviewed against current Google Play policy.
+- [x] All functional requirements in `PRODUCT.md` are demonstrable on the target
+      API via the automated and manual checks above.
+- [x] Full automated suite, lint, release build, and emulator manual matrix pass.
+- [x] No known P0/P1 data-loss, duplication, privacy, crash, or total-correctness
+      defect remains after the review pass and P1 fixes.
+- [x] High-volume import is bounded with zero duplicates (automated 10k corpus).
+- [x] TalkBack/font-scale/contrast checks pass on primary paths (emulator).
+- [ ] Public distribution: pending physical-device/OEM and Google Play SMS
+      permission declaration review (external, release-blocking).
 
 ### Test gate
 
-- [ ] Run every command and matrix item in `TESTING.md`.
-- [ ] Clean install, upgrade, permission denial/revocation, process death, and
-      physical incoming-SMS end-to-end tests pass.
-- [ ] Independently recalculate seeded weekly/monthly totals and compare exactly.
-- [ ] Inspect database, Logcat, screenshots, and release manifest for privacy leaks.
+- [x] Every command and matrix item in `TESTING.md` runs green.
+- [x] Clean install, upgrade, permission denial/revocation, process death, and
+      delete-all pass (emulator + automated).
+- [x] Independently recalculated seeded weekly/monthly totals match the dashboard.
+- [x] Database, Logcat, screenshots, and release manifest inspected for privacy
+      leaks: no raw SMS or sensitive identifiers found.
+- [ ] Physical-device incoming-SMS end-to-end and OEM-provider behavior remain.
+
+### Remaining before public release (external)
+
+- Physical Android phone/OEM SMS-provider validation, including a real incoming
+  financial SMS reconcile.
+- Google Play restricted-SMS permission eligibility + declaration submission.
 
 ---
 

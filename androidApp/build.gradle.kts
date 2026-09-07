@@ -3,6 +3,19 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+// Optional release signing. Create a local keystore.properties with the release
+// keystore credentials to produce a signed release APK; the file is gitignored
+// and must never be committed. Without it, assembleRelease stays unsigned.
+import java.util.Properties
+import java.io.FileInputStream
+
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        FileInputStream(keystorePropertiesFile).use { load(it) }
+    }
+}
+
 android {
     namespace = "com.spendtracker.app"
     compileSdk = 37
@@ -15,6 +28,29 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments["disableAnalytics"] = "true"
+    }
+
+    signingConfigs {
+        create("release") {
+            val required = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+            val present = required.all { keystoreProperties.getProperty(it) != null }
+            if (present) {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            // Sign only when keystore.properties supplies credentials; otherwise the
+            // build leaves the release APK unsigned for the signing handoff step.
+            signingConfig = signingConfigs.getByName("release").takeIf {
+                keystoreProperties.getProperty("storeFile") != null
+            }
+        }
     }
 
     buildFeatures {

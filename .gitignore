@@ -7,3 +7,8 @@
 local.properties
 captures/
 .DS_Store
+
+# Local release signing credentials; never commit.
+keystore.properties
+*.jks
+*.keystore
