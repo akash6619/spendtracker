@@ -1,10 +1,11 @@
 # Current status
 
-- Last updated: 2026-09-06
-- Current milestone: MVP plan feature-complete (MVP-10 gate done; external
-  physical-device and Google Play review remain before public distribution)
-- Next recommended slice: none (all MVP slices complete). Public release requires
-  the external steps in MVP-10's remaining items.
+- Last updated: 2026-09-07
+- Current milestone: product enhancement work before release hardening; the app
+  is not release-ready.
+- Next recommended work: UI enhancement and parser/classification refinement.
+  Resume the open MVP-10 hardening and controlled-release gate after those
+  enhancements stabilize.
 - Active work: none
 
 ## Active work
@@ -308,7 +309,8 @@ emulator confirmed the dialog and its permission-revoked explanation; the
 live-found path with a real provider row remains release validation on a
 physical device.
 
-On 2026-09-06, the MVP-10 gate completed its code and material deliverables:
+On 2026-09-06, an initial MVP-10 groundwork pass completed these code and
+material checks:
 
 ```shell
 ./gradlew :shared:compileKotlinIosSimulatorArm64 :shared:jvmTest \
@@ -324,10 +326,10 @@ on the API 37 emulator. The 10,000-message import coverage remains bounded
 were verified on the emulator, and a 150% font-scale pass succeeded on primary
 paths. The merged release manifest declares `READ_SMS` only, disables backup,
 and contains no `INTERNET`. No raw SMS or sensitive identifiers appeared in
-Logcat or fixtures. Remaining before public distribution: physical
-phone/OEM-provider validation (including a real incoming financial SMS) and the
-Google Play restricted-SMS permission declaration review; these are external
-and release-blocking.
+Logcat or fixtures. MVP-10 remains open and will be rerun after planned UI and
+parser/classification enhancements. Remaining release work also includes a
+signed artifact, physical phone/OEM-provider validation (including a real
+incoming financial SMS), and Google Play restricted-SMS permission review.
 
 ## Known gaps
 

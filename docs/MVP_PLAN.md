@@ -26,7 +26,7 @@ slice begins.
 | MVP-07 | Weekly and monthly dashboard | Complete | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Complete | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Complete | MVP-06, MVP-08 | Users control access, data, and currency explanations |
-| MVP-10 | Hardening and controlled-release gate | Complete | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
+| MVP-10 | Hardening and controlled-release gate | Ready | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices
@@ -490,8 +490,7 @@ Cloud export, account deletion, or sync privacy controls.
 
 ## MVP-10 — Hardening and controlled-release gate
 
-**Status:** Complete (release materials + code gate; external physical-device and
-Google Play review validation remain before public distribution)
+**Status:** Ready (deferred while product enhancements are in progress)
 **Depends on:** MVP-01 through MVP-09
 
 ### Goal
@@ -510,7 +509,7 @@ and a Google Play permission review submission.
   privacy policy, and restricted SMS Permissions Declaration material.
 - Remove debug fixtures/logging from release behavior and audit dependencies.
 
-### Deliverables (as implemented)
+### Release groundwork already completed
 
 - Code gate green: full shared/JVM, Android unit, lint, debug/release assembly,
   iOS simulator compile, and connected Compose/instrumentation on API 37.
@@ -530,25 +529,25 @@ and a Google Play permission review submission.
 
 ### Acceptance criteria
 
-- [x] All functional requirements in `PRODUCT.md` are demonstrable on the target
-      API via the automated and manual checks above.
-- [x] Full automated suite, lint, release build, and emulator manual matrix pass.
-- [x] No known P0/P1 data-loss, duplication, privacy, crash, or total-correctness
-      defect remains after the review pass and P1 fixes.
+- [ ] All functional requirements in `PRODUCT.md` are demonstrable on API 26,
+      the target API, and a physical Android/OEM device after enhancement work.
+- [ ] Full automated suite, lint, signed release build, and manual matrix pass.
+- [ ] No known P0/P1 data-loss, duplication, privacy, crash, accessibility, or
+      total-correctness defect remains after the final review pass.
 - [x] High-volume import is bounded with zero duplicates (automated 10k corpus).
-- [x] TalkBack/font-scale/contrast checks pass on primary paths (emulator).
+- [ ] TalkBack/font-scale/contrast checks pass on all primary paths in the final UI.
 - [ ] Public distribution: pending physical-device/OEM and Google Play SMS
       permission declaration review (external, release-blocking).
 
 ### Test gate
 
-- [x] Every command and matrix item in `TESTING.md` runs green.
+- [ ] Every command and matrix item in `TESTING.md` runs green on the final code.
 - [x] Clean install, upgrade, permission denial/revocation, process death, and
       delete-all pass (emulator + automated).
 - [x] Independently recalculated seeded weekly/monthly totals match the dashboard.
 - [x] Database, Logcat, screenshots, and release manifest inspected for privacy
       leaks: no raw SMS or sensitive identifiers found.
-- [ ] Physical-device incoming-SMS end-to-end and OEM-provider behavior remain.
+- [ ] Physical-device incoming-SMS end-to-end and OEM-provider behavior pass.
 
 ### Remaining before public release (external)
 
