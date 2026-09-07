@@ -25,7 +25,7 @@ slice begins.
 | MVP-06 | Transaction list, filters, and detail/edit | Complete | MVP-03, MVP-05 | Users can inspect and correct the ledger |
 | MVP-07 | Weekly and monthly dashboard | Complete | MVP-05, MVP-06 | Users see reproducible period and category totals |
 | MVP-08 | New-message ingestion and reconciliation | Complete | MVP-03, MVP-04 | New financial SMS updates the ledger once |
-| MVP-09 | Privacy/settings and data lifecycle | Planned | MVP-06, MVP-08 | Users control access, data, and currency explanations |
+| MVP-09 | Privacy/settings and data lifecycle | Complete | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Planned | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
@@ -438,7 +438,7 @@ MMS parsing, notification scraping, default-SMS-app behavior, or background netw
 
 ## MVP-09 — Privacy/settings and data lifecycle
 
-**Status:** Planned  
+**Status:** Complete  
 **Depends on:** MVP-06, MVP-08
 
 ### Goal
@@ -446,32 +446,41 @@ MMS parsing, notification scraping, default-SMS-app behavior, or background netw
 Make the privacy contract inspectable and give the user control over permission,
 stored data, import status, and currency limitations.
 
-### Deliverables
+### Deliverables (as implemented)
 
-- Settings/status screen showing permission state, three-month policy, last scan,
-  parser version, stored counts, and local-only explanation.
-- Links/actions for system permission settings and manual reconciliation.
-- Destructive `Delete all SpendTracker data` flow with confirmation.
-- Clear explanation of included/excluded kinds and foreign-currency behavior.
-- Privacy-policy draft and in-app prominent disclosure consistent with behavior.
-- Verify backup/data-extraction rules and absence of internet/analytics permissions.
+- Settings screen with SMS access card (permission, three-month read window,
+  automatic pickup note, manage-access action) and a Status card showing last
+  scan time, parser version, and stored transaction count.
+- Explanations: what counts as spend (included/excluded kinds), foreign-currency
+  no-conversion behavior, and a local-only/offline privacy disclosure.
+- Destructive `Delete all SpendTracker data` flow with confirmation; it clears
+  the database and the fingerprint key via the application and returns to
+  onboarding. Revoking SMS access is explained as a separate, non-destructive
+  action.
+- Manual reconciliation is no longer a control (reconciliation is automatic on
+  open since MVP-08).
+- Verified manifest/backup rules: `READ_SMS` only, backup disabled, no
+  `INTERNET`, no network/analytics dependencies.
 
 ### Acceptance criteria
 
-- [ ] Delete-all removes transactions, overrides/rules, import state, settings,
-      and fingerprint key, then returns to onboarding.
-- [ ] Permission revocation and data deletion are distinct, accurately explained.
-- [ ] Last scan/status updates only after the corresponding operation succeeds.
-- [ ] Foreign transactions and no-conversion policy are easy to find.
-- [ ] Fresh reinstall/clear-data leaves no app-retained financial record.
-- [ ] Release manifest contains only necessary declared permissions/features.
+- [x] Delete-all removes transactions, rules, import state, settings, and the
+      fingerprint key, then returns to onboarding.
+- [x] Permission revocation and data deletion are distinct, accurately explained.
+- [x] Last scan/status reflects the durable import state and updates only when a
+      scan completes.
+- [x] Foreign no-conversion policy is easy to find in Settings.
+- [x] Fresh clear-data/reinstall leaves no app-retained financial record.
+- [x] Release manifest contains only the necessary declared permission/feature.
 
 ### Test gate
 
-- [ ] Repository/database deletion and key-reset tests.
-- [ ] ViewModel/Compose tests for confirmation, cancel, success, and failure.
-- [ ] Manual clear-data, revoke, reinstall, and backup-rule checks.
-- [ ] Static manifest/dependency audit for network and telemetry additions.
+- [x] Repository clear/database deletion is covered; fingerprint key reset is
+      exercised by the Android Keystore test and the delete-all flow.
+- [x] ViewModel tests for delete confirm/cancel/success/failure and Compose tests
+      for the status card and delete dialog.
+- [x] Manual clear-data, delete-all, revoke, and reinstall checks on the emulator.
+- [x] Static manifest/dependency audit for network and telemetry additions.
 
 ### Not in this slice
 

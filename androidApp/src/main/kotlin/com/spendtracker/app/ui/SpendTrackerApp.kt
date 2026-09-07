@@ -25,6 +25,7 @@ import com.spendtracker.app.R
 import com.spendtracker.app.ui.dashboard.DashboardActions
 import com.spendtracker.app.ui.dashboard.DashboardScreen
 import com.spendtracker.app.ui.onboarding.OnboardingScreen
+import com.spendtracker.app.ui.settings.SettingsActions
 import com.spendtracker.app.ui.settings.SettingsScreen
 import com.spendtracker.app.ui.transactions.TransactionsScreen
 import com.spendtracker.app.ui.transactions.TransactionActions
@@ -77,6 +78,16 @@ fun SpendTrackerApp(
             onExcludedSelected = viewModel::onDashboardExcludedSelected,
             onForeignSelected = viewModel::onDashboardForeignSelected,
         ),
+        settingsActions = SettingsActions(
+            onRequestPermission = onRequestSmsPermission,
+            onOpenAppSettings = onOpenAppSettings,
+            onCancelImport = viewModel::onCancelImport,
+            onLeaveDemoData = viewModel::onLeaveDemoData,
+            onRequestDeleteAll = viewModel::onRequestDeleteAll,
+            onCancelDeleteAll = viewModel::onCancelDeleteAll,
+            onConfirmDeleteAll = viewModel::onConfirmDeleteAll,
+            onDeleteAllNoticeShown = viewModel::onDeleteAllNoticeShown,
+        ),
     )
 }
 
@@ -92,6 +103,7 @@ fun SpendTrackerAppContent(
     onDestinationSelected: (TopLevelDestination) -> Unit,
     transactionActions: TransactionActions = TransactionActions(),
     dashboardActions: DashboardActions = DashboardActions(),
+    settingsActions: SettingsActions = SettingsActions(),
 ) {
     when (state.stage) {
         AppStage.INITIALIZING -> Box(
@@ -112,13 +124,10 @@ fun SpendTrackerAppContent(
 
         AppStage.MAIN -> MainAppScaffold(
             state = state,
-            onRequestSmsPermission = onRequestSmsPermission,
-            onOpenAppSettings = onOpenAppSettings,
-            onCancelImport = onCancelImport,
-            onLeaveDemoData = onLeaveDemoData,
             onDestinationSelected = onDestinationSelected,
             transactionActions = transactionActions,
             dashboardActions = dashboardActions,
+            settingsActions = settingsActions,
         )
     }
 }
@@ -126,13 +135,10 @@ fun SpendTrackerAppContent(
 @Composable
 private fun MainAppScaffold(
     state: AppUiState,
-    onRequestSmsPermission: () -> Unit,
-    onOpenAppSettings: () -> Unit,
-    onCancelImport: () -> Unit,
-    onLeaveDemoData: () -> Unit,
     onDestinationSelected: (TopLevelDestination) -> Unit,
     transactionActions: TransactionActions,
     dashboardActions: DashboardActions,
+    settingsActions: SettingsActions,
 ) {
     Scaffold(
         bottomBar = {
@@ -171,10 +177,7 @@ private fun MainAppScaffold(
 
             TopLevelDestination.SETTINGS -> SettingsScreen(
                 state = state,
-                onRequestPermission = onRequestSmsPermission,
-                onOpenAppSettings = onOpenAppSettings,
-                onCancelImport = onCancelImport,
-                onLeaveDemoData = onLeaveDemoData,
+                actions = settingsActions,
                 modifier = Modifier.padding(padding),
             )
         }

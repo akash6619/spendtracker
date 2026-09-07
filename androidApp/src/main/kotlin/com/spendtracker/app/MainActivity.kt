@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
             importRunner = dependencies.importCoordinator,
             initialPermissionGranted = hasSmsPermission(),
             sourceMessageLookup = dependencies.sourceLookup,
+            deleteAllLocalData = { dependencies.deleteAllLocalData() },
         )
     }
 

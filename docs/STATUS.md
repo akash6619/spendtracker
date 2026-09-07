@@ -1,8 +1,8 @@
 # Current status
 
 - Last updated: 2026-09-06
-- Current milestone: MVP-08 reconciliation-primary new-message ingestion complete
-- Next recommended slice: MVP-09 privacy/settings and data lifecycle
+- Current milestone: MVP-09 privacy/settings and data lifecycle complete
+- Next recommended slice: MVP-10 hardening and controlled-release gate
 - Active work: none
 
 ## Active work
@@ -120,6 +120,13 @@ Agents must claim work here before implementation and clear the row at handoff.
   first scan), and new financial messages are reconciled automatically on every
   app open. Verified end-to-end on the API 37 emulator with injected SMS (₹850 +
   ₹240 both appeared after reopen, stored once).
+- Privacy/settings and data lifecycle (D-021/MVP-09): Settings shows SMS access
+  and the three-month window, a status card (last scan, parser version, stored
+  count), what-counts-as-spend and foreign no-conversion explanations, and an
+  in-app privacy disclosure. `Delete all SpendTracker data` clears the database
+  and fingerprint key after confirmation and returns to onboarding; revoking
+  access is explained as the separate non-destructive action. Manifest audit:
+  `READ_SMS` only, backup disabled, no `INTERNET`, no network/analytics deps.
 - Sixty shared JVM tests, twenty-four Android local tests, fourteen connected
   Compose tests, two connected importer/provider tests, and one connected
   Keystore test.
@@ -308,8 +315,6 @@ physical device.
   up by automatic foreground reconciliation on every app open; the manual
   "Check for new messages" button was removed. Instant live pickup via
   notification-listener access remains a post-MVP opt-in candidate.
-- The Settings shell exists, but delete-all and complete data-lifecycle controls
-  do not.
 - Real SMS-provider behavior and physical-device checks remain release work;
   automated importer integration uses a synthetic source and real Room database.
 - Public release requires Google Play restricted-SMS-permission review material.

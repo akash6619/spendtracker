@@ -118,6 +118,21 @@ data class TransactionsUiState(
 )
 
 /**
+ * Render-ready privacy/status facts and the destructive delete-all lifecycle.
+ * Values are coarse and non-sensitive; last scan and parser version come from
+ * durable import state, the stored count from the real (non-demo) ledger.
+ */
+data class SettingsUiState(
+    val lastScanEpochMillis: Long? = null,
+    val parserVersion: Int = 1,
+    val storedTransactionCount: Int = 0,
+    val showDeleteConfirm: Boolean = false,
+    val isDeletingAll: Boolean = false,
+    val deleteAllFailed: Boolean = false,
+    val deleteAllSucceeded: Boolean = false,
+)
+
+/**
  * Immutable snapshot consumed by the top-level Compose application.
  * It combines permission, navigation, scan progress/error, demo selection, and
  * child-screen state so rendering remains a pure function of one value.
@@ -135,4 +150,5 @@ data class AppUiState(
     val usingDemoData: Boolean = false,
     val dashboard: DashboardUiState = DashboardUiState(),
     val transactions: TransactionsUiState = TransactionsUiState(),
+    val settings: SettingsUiState = SettingsUiState(),
 )

@@ -52,6 +52,7 @@ class AppViewModel(
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
     private val timeZone: () -> TimeZone = { TimeZone.of(ZoneId.systemDefault().id) },
     private val sourceMessageLookup: SourceMessageLookup? = null,
+    private val deleteAllLocalData: suspend () -> Unit = {},
 ) : ViewModel() {
     private var repositoryObservation: Job? = null
     private var activeRepository = primaryRepository
@@ -60,6 +61,7 @@ class AppViewModel(
     private var sourceJob: Job? = null
     private var importObservation: Job? = null
     private var importJob: Job? = null
+    private var deleteJob: Job? = null
     private var platformPermissionGranted = initialPermissionGranted
     private var shouldShowPermissionRationale = false
     private var permissionRequested = false
@@ -265,12 +267,76 @@ class AppViewModel(
         _uiState.update { it.copy(error = null) }
     }
 
+    fun onDeleteAllNoticeShown() {
+        _uiState.update { it.copy(settings = it.settings.copy(deleteAllSucceeded = false)) }
+    }
+
+    fun onRequestDeleteAll() {
+        if (_uiState.value.settings.isDeletingAll || _uiState.value.isScanning) return
+        _uiState.update { it.copy(settings = it.settings.copy(showDeleteConfirm = true)) }
+    }
+
+    fun onCancelDeleteAll() {
+        _uiState.update { it.copy(settings = it.settings.copy(showDeleteConfirm = false)) }
+    }
+
+    fun onConfirmDeleteAll() {
+        val settings = _uiState.value.settings
+        if (settings.isDeletingAll) return
+        _uiState.update { it.copy(settings = it.settings.copy(
+            showDeleteConfirm = false, isDeletingAll = true, deleteAllFailed = false, deleteAllSucceeded = false,
+        )) }
+        deleteJob = viewModelScope.launch {
+            try {
+                importJob?.cancel()
+                deleteAllLocalData()
+                resetAfterDeleteAll()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                _uiState.update { it.copy(settings = it.settings.copy(
+                    isDeletingAll = false, deleteAllFailed = true,
+                )) }
+            }
+        }
+    }
+
+    /**
+     * Wipes in-memory orchestration state after local data deletion and returns
+     * to onboarding. SMS system permission is unchanged; a re-scan only happens
+     * on a later explicit grant flow or app resume.
+     */
+    private fun resetAfterDeleteAll() {
+        importJob?.cancel()
+        editJob?.cancel()
+        sourceJob?.cancel()
+        repositoryObservation?.cancel()
+        importObservation?.cancel()
+        ledger = emptyList()
+        durableImportState = ImportState()
+        permissionRequested = false
+        autoInitialAttempted = false
+        resumeReconciliationPending = false
+        activeRepository = primaryRepository
+        _uiState.value = AppUiState(
+            permission = if (platformPermissionGranted) PermissionUiState.GRANTED else PermissionUiState.NOT_REQUESTED,
+            demoAvailable = demoRepository != null,
+            settings = SettingsUiState(deleteAllSucceeded = true, isDeletingAll = false),
+        )
+        observe(primaryRepository)
+        observeImportState()
+        applyImportState(durableImportState)
+    }
+
     private fun onTransactionsChanged(transactions: List<LedgerTransaction>) {
         ledger = transactions
         val usingDemoData = _uiState.value.usingDemoData
         _uiState.update {
             it.copy(
                 dashboard = computeDashboard(transactions, it.dashboard.period, usingDemoData),
+                settings = it.settings.copy(
+                    storedTransactionCount = if (usingDemoData) it.settings.storedTransactionCount else transactions.size,
+                ),
                 transactions = it.transactions.copy(
                     transactions = transactions.filteredBy(it.transactions.filter),
                     isDemo = usingDemoData,
@@ -420,6 +486,10 @@ class AppViewModel(
                     state.progress.toSummary()
                 },
                 error = if (state.status == ImportRunStatus.FAILED) AppError.SCAN_FAILED else null,
+                settings = current.settings.copy(
+                    lastScanEpochMillis = state.lastSuccessfulScanEpochMillis,
+                    parserVersion = state.parserVersion,
+                ),
             )
         }
     }
@@ -482,6 +552,7 @@ class AppViewModel(
         private val importRunner: ImportRunner,
         private val initialPermissionGranted: Boolean,
         private val sourceMessageLookup: SourceMessageLookup,
+        private val deleteAllLocalData: suspend () -> Unit,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -495,6 +566,7 @@ class AppViewModel(
                 importRunner = importRunner,
                 initialPermissionGranted = initialPermissionGranted,
                 sourceMessageLookup = sourceMessageLookup,
+                deleteAllLocalData = deleteAllLocalData,
             ) as T
         }
     }

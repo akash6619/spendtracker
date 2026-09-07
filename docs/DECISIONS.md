@@ -292,3 +292,24 @@ entry that records the reason, migration impact, and affected tests.
   it sits closed. Duplicate reads and overlap never duplicate a row, user-edited
   rows are frozen against reprocessing, and process death/reboot recover on the
   next open. Live notification-based pickup remains a post-MVP opt-in candidate.
+## D-021 — Settings status screen and delete-all data lifecycle
+
+- Date: 2026-09-06
+- Status: Accepted
+- Decision: The Settings screen surfaces the privacy contract and the data
+  lifecycle. SMS access card shows permission, the three-month local read
+  window, an automatic-pickup note, and a manage-access action into system
+  settings. Status card shows last successful scan time, parser version, and the
+  locally stored transaction count, all derived from durable import state and
+  the observed ledger. What-counts-as-spend and foreign no-conversion behavior
+  are explained in place. `Delete all SpendTracker data` clears the database
+  (transactions, rules, import state, settings) and deletes the fingerprint key,
+  then resets to onboarding; revoking SMS access is described as the separate
+  non-destructive way to stop scanning.
+- Reason: The privacy contract must be inspectable and data deletion must be a
+  deliberate, confirmed destructive action distinct from permission revocation.
+- Consequence: Delete-all runs on the app's IO/ViewModel scope, disables scanning
+  during the operation, and returns to onboarding with the (unchanged) SMS
+  system permission. No schema change; the fingerprint key is removed so future
+  re-imports start with fresh identities. Manual reconciliation is not offered
+  because new-message pickup is already automatic on open (D-020).

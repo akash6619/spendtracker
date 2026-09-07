@@ -670,6 +670,84 @@ class AppViewModelTest {
         assertEquals(1, runs)
     }
 
+    @Test
+    fun deleteAllConfirmWipesLocalStateAndReturnsToOnboarding() = runTest {
+        val repository = InMemoryTransactionRepository(listOf(transaction("data")))
+        val stateRepository = FakeImportStateRepository(
+            ImportState(status = ImportRunStatus.COMPLETED, initialImportComplete = true, parserVersion = 3),
+        )
+        var deleted = 0
+        val vm = AppViewModel(
+            primaryRepository = repository,
+            importStateRepository = stateRepository,
+            demoRepository = null,
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            deleteAllLocalData = {
+                deleted += 1
+                repository.clear()
+                stateRepository.saveImportState(ImportState())
+            },
+        )
+        advanceUntilIdle()
+        assertEquals(AppStage.MAIN, vm.uiState.value.stage)
+        assertEquals(1, vm.uiState.value.settings.storedTransactionCount)
+
+        vm.onRequestDeleteAll()
+        assertTrue(vm.uiState.value.settings.showDeleteConfirm)
+        vm.onConfirmDeleteAll()
+        advanceUntilIdle()
+
+        assertEquals(1, deleted)
+        assertEquals(AppStage.ONBOARDING, vm.uiState.value.stage)
+        assertEquals(0, vm.uiState.value.settings.storedTransactionCount)
+        assertTrue(vm.uiState.value.transactions.transactions.isEmpty())
+        assertTrue(vm.uiState.value.settings.deleteAllSucceeded)
+        vm.onDeleteAllNoticeShown()
+        assertFalse(vm.uiState.value.settings.deleteAllSucceeded)
+    }
+
+    @Test
+    fun deleteAllCancelDoesNothingAndFailureIsRecoverable() = runTest {
+        val repository = InMemoryTransactionRepository(listOf(transaction("data")))
+        val stateRepository = FakeImportStateRepository(
+            ImportState(status = ImportRunStatus.COMPLETED, initialImportComplete = true),
+        )
+        var fail = true
+        val vm = AppViewModel(
+            primaryRepository = repository,
+            importStateRepository = stateRepository,
+            demoRepository = null,
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            deleteAllLocalData = {
+                if (fail) error("synthetic delete failure")
+                repository.clear()
+                stateRepository.saveImportState(ImportState())
+            },
+        )
+        advanceUntilIdle()
+        vm.onRequestDeleteAll()
+        vm.onCancelDeleteAll()
+        assertFalse(vm.uiState.value.settings.showDeleteConfirm)
+        assertEquals(AppStage.MAIN, vm.uiState.value.stage)
+
+        vm.onRequestDeleteAll()
+        vm.onConfirmDeleteAll()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.settings.deleteAllFailed)
+        assertEquals(AppStage.MAIN, vm.uiState.value.stage)
+
+        fail = false
+        vm.onConfirmDeleteAll()
+        advanceUntilIdle()
+        assertEquals(AppStage.ONBOARDING, vm.uiState.value.stage)
+    }
+
     private fun viewModel(
         repository: TransactionRepository,
         stateRepository: FakeImportStateRepository,

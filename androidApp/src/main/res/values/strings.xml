@@ -84,25 +84,33 @@
     <string name="sms_access_required">Not granted</string>
     <string name="local_only_title">Local-only MVP</string>
     <string name="local_only_body">No account, backend, analytics, or internet permission is used. Parsed transactions are stored only on this device; SMS bodies are not saved.</string>
-    <plurals name="scan_inspected_count">
-        <item quantity="one">Last scan inspected %1$d message.</item>
-        <item quantity="other">Last scan inspected %1$d messages.</item>
+    <string name="status_title">Status</string>
+    <string name="status_never_scanned">No scan completed yet</string>
+    <string name="status_last_scan">Last scan: %1$s</string>
+    <string name="status_parser_version">Parser version: %1$d</string>
+    <plurals name="status_stored_count">
+        <item quantity="one">%1$d transaction stored locally</item>
+        <item quantity="other">%1$d transactions stored locally</item>
     </plurals>
+    <string name="import_window">Reads the previous three calendar months only, on this device.</string>
+    <string name="what_counts_title">What counts as spend</string>
+    <string name="what_counts_body">Debit purchases and fees are included. Credits, refunds, transfers, and ATM withdrawals stay visible but excluded from totals. You can change either per transaction.</string>
+    <string name="foreign_explanation_short">Foreign-currency records keep their original currency and are never converted; they are excluded from INR totals.</string>
+    <string name="data_lifecycle_title">Delete all SpendTracker data</string>
+    <string name="data_lifecycle_body">Removes every stored transaction, category change, import status, and the local fingerprint key from this device. Revoking SMS access (in system Settings) is separate and stops future scans without deleting stored data.</string>
+    <string name="action_delete_all">Delete all data</string>
+    <string name="delete_confirm_title">Delete all SpendTracker data?</string>
+    <string name="delete_confirm_body">This permanently removes all locally stored transaction data. It cannot be undone.</string>
+    <string name="action_confirm_delete">Delete everything</string>
+    <string name="delete_failed">Data could not be deleted. Please try again.</string>
+    <string name="delete_succeeded">All SpendTracker data was deleted.</string>
+    <string name="deleting">Deleting…</string>
+    <string name="action_manage_sms">Manage SMS access</string>
+    <string name="privacy_policy_title">Privacy</string>
+    <string name="privacy_policy_body">SpendTracker runs fully offline: no login, no account, no analytics, no ads, and no internet permission. Financial SMS bodies are read only to parse a transaction and are never saved. Parsed records live only on this device. To stop scanning, revoke SMS access in system Settings; to remove stored data, use Delete all data above.</string>
     <plurals name="scan_progress_count">
         <item quantity="one">%1$d message inspected</item>
         <item quantity="other">%1$d messages inspected</item>
-    </plurals>
-    <plurals name="scan_recognized_count">
-        <item quantity="one">It recognized %1$d transaction.</item>
-        <item quantity="other">It recognized %1$d transactions.</item>
-    </plurals>
-    <plurals name="scan_saved_count">
-        <item quantity="one">%1$d new transaction was saved.</item>
-        <item quantity="other">%1$d new transactions were saved.</item>
-    </plurals>
-    <plurals name="scan_rejected_count">
-        <item quantity="one">%1$d message was ignored because it was not safely recognized.</item>
-        <item quantity="other">%1$d messages were ignored because they were not safely recognized.</item>
     </plurals>
     <string name="demo_mode_title">Demo data is active</string>
     <string name="demo_mode_body">These are synthetic transactions included only in debug builds.</string>
