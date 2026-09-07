@@ -115,6 +115,11 @@ Agents must claim work here before implementation and clear the row at handoff.
   inclusion become the single values and `userEdited` is set, so migrated
   corrections keep their re-import protection. Migration chain tested from
   version 1.
+- Automatic ingestion (D-020/MVP-08): the three-month initial scan starts on its
+  own once SMS access is granted (no button; retry shown only after a failed
+  first scan), and new financial messages are reconciled automatically on every
+  app open. Verified end-to-end on the API 37 emulator with injected SMS (₹850 +
+  ₹240 both appeared after reopen, stored once).
 - Sixty shared JVM tests, twenty-four Android local tests, fourteen connected
   Compose tests, two connected importer/provider tests, and one connected
   Keystore test.

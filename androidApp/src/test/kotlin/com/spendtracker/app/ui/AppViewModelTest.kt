@@ -616,6 +616,60 @@ class AppViewModelTest {
         assertFalse(saved.includedInSpend)
     }
 
+    @Test
+    fun grantingPermissionAutoStartsInitialImportWithoutManualScan() = runTest {
+        val stateRepository = FakeImportStateRepository()
+        val requestedModes = mutableListOf<ImportMode>()
+        val runner = ImportRunner { mode, _ ->
+            requestedModes += mode
+            val progress = ImportProgress(scannedMessages = 5)
+            ImportState(
+                status = ImportRunStatus.COMPLETED,
+                initialImportComplete = true,
+                progress = progress,
+            ).also { stateRepository.saveImportState(it) }
+        }
+        val vm = viewModel(
+            InMemoryTransactionRepository(),
+            stateRepository,
+            runner,
+            permissionGranted = false,
+        )
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.transactions.transactions.isEmpty())
+
+        // No explicit scan call: granting access must launch the initial import.
+        vm.onPermissionResult(granted = true, shouldShowRationale = false)
+        advanceUntilIdle()
+
+        assertEquals(listOf(ImportMode.INITIAL), requestedModes)
+        assertEquals(AppStage.MAIN, vm.uiState.value.stage)
+    }
+
+    @Test
+    fun autoInitialImportDoesNotRepeatOnResumeAfterCompletion() = runTest {
+        val stateRepository = FakeImportStateRepository(
+            ImportState(status = ImportRunStatus.COMPLETED, initialImportComplete = true),
+        )
+        var runs = 0
+        val runner = ImportRunner { mode, _ ->
+            runs += 1
+            assertEquals(ImportMode.RECONCILIATION, mode)
+            stateRepository.getImportState()
+        }
+        val vm = viewModel(
+            InMemoryTransactionRepository(),
+            stateRepository,
+            runner,
+            permissionGranted = true,
+        )
+        advanceUntilIdle()
+        vm.onAppResumed(granted = true, shouldShowRationale = false)
+        advanceUntilIdle()
+        // After completion only reconciliation runs (once), never another initial scan.
+        assertEquals(1, runs)
+    }
+
     private fun viewModel(
         repository: TransactionRepository,
         stateRepository: FakeImportStateRepository,

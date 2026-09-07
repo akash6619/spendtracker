@@ -140,22 +140,15 @@ fun OnboardingScreen(
                 title = stringResource(R.string.permission_granted_title),
                 body = stringResource(R.string.permission_granted_body),
             ) {
-                Button(
-                    onClick = onScanMessages,
-                    enabled = !state.isScanning,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.SCAN_MESSAGES),
-                ) {
-                    Text(
-                        stringResource(
-                            if (state.error == AppError.SCAN_FAILED) {
-                                R.string.action_try_again
-                            } else {
-                                R.string.action_scan_messages
-                            },
-                        ),
-                    )
+                if (state.error == AppError.SCAN_FAILED && !state.isScanning) {
+                    Button(
+                        onClick = onScanMessages,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(UiTestTags.SCAN_MESSAGES),
+                    ) {
+                        Text(stringResource(R.string.action_try_again))
+                    }
                 }
             }
         }

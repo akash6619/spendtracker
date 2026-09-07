@@ -12,7 +12,7 @@
     <string name="permission_required_title">Allow SMS access</string>
     <string name="permission_required_body">Android requires your permission before SpendTracker can read the inbox. You can revoke it later in system settings.</string>
     <string name="permission_granted_title">Ready to scan</string>
-    <string name="permission_granted_body">SMS access is enabled. Start the local three-month scan when you are ready.</string>
+    <string name="permission_granted_body">SMS access is enabled. The local three-month scan starts automatically.</string>
     <string name="permission_denied_title">SMS access was denied</string>
     <string name="permission_denied_body">SpendTracker cannot scan messages without access. You can review the privacy explanation and try again.</string>
     <string name="permission_blocked_title">Enable SMS access in Settings</string>
@@ -22,7 +22,6 @@
     <string name="action_allow_sms">Allow SMS access</string>
     <string name="action_try_permission_again">Try permission again</string>
     <string name="action_open_settings">Open app settings</string>
-    <string name="action_scan_messages">Scan last 3 months</string>
     <string name="action_cancel_import">Cancel import</string>
     <string name="action_try_again">Try scan again</string>
     <string name="action_explore_demo">Explore with demo data</string>

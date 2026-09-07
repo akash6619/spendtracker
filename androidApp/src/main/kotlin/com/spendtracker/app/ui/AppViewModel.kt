@@ -65,6 +65,7 @@ class AppViewModel(
     private var permissionRequested = false
     private var durableImportState = ImportState()
     private var resumeReconciliationPending = false
+    private var autoInitialAttempted = false
     private val _uiState = MutableStateFlow(
         AppUiState(
             permission = initialPermissionGranted.toPermissionUiState(),
@@ -88,6 +89,9 @@ class AppViewModel(
 
     fun onPermissionResult(granted: Boolean, shouldShowRationale: Boolean) {
         updatePlatformPermission(granted, shouldShowRationale)
+        // Once SMS access is granted and no initial import has run, start the
+        // three-month scan automatically without an explicit button.
+        maybeAutoStartInitialImport()
     }
 
     fun onAppResumed(granted: Boolean, shouldShowRationale: Boolean) {
@@ -96,6 +100,7 @@ class AppViewModel(
         // the device zone, so recompute dashboard facts from the same stored data.
         _uiState.update { it.copy(dashboard = computeDashboard(ledger, it.dashboard.period, it.usingDemoData)) }
         resumeReconciliationPending = granted && !_uiState.value.isScanning
+        maybeAutoStartInitialImport()
         maybeRunPendingReconciliation()
     }
 
@@ -446,6 +451,23 @@ class AppViewModel(
 
         resumeReconciliationPending = false
         runImport(ImportMode.RECONCILIATION)
+    }
+
+    /**
+     * Starts the three-month initial scan automatically once SMS access is
+     * granted and no initial import has completed, with no explicit button.
+     * It fires at most once per grant; a failed attempt needs the retry action.
+     */
+    private fun maybeAutoStartInitialImport() {
+        if (_uiState.value.usingDemoData ||
+            !platformPermissionGranted ||
+            durableImportState.initialImportComplete ||
+            _uiState.value.isScanning ||
+            autoInitialAttempted
+        ) return
+
+        autoInitialAttempted = true
+        runImport(ImportMode.INITIAL)
     }
 
     /**

@@ -401,6 +401,9 @@ Add each new supported financial SMS exactly once and recover from missed events
   the last successful scan with a safe overlap window (already present from the
   import lifecycle, D-011). UI observes the repository, so new records refresh
   list and dashboard automatically without a manual rescan.
+- The initial three-month import also starts automatically once SMS access is
+  granted during onboarding; no explicit scan button. A failed first scan
+  exposes a retry action.
 - The manual "Check for new messages" Settings button is removed; pickup is
   automatic on app open only.
 - Non-sensitive status text only; no content-bearing notifications.
