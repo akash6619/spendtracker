@@ -9,6 +9,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -86,6 +88,47 @@ class DashboardScreenTest {
         compose.onNodeWithTag("period_month").performClick()
         compose.onNodeWithText("This month").assertIsDisplayed()
         assertEquals(listOf(DashboardPeriod.MONTH), requested)
+    }
+
+    @Test
+    fun daySelectorAndHistoricalNavigationExposeExpectedControls() {
+        val requested = mutableListOf<DashboardPeriod>()
+        var previous = 0
+        var next = 0
+        compose.setContent {
+            var state by remember { mutableStateOf(weekState()) }
+            SpendTrackerTheme {
+                DashboardScreen(
+                    state,
+                    actions = DashboardActions(
+                        onPeriodSelected = {
+                            requested += it
+                            state = state.copy(period = it, periodOffset = 0)
+                        },
+                        onPreviousPeriod = {
+                            previous += 1
+                            state = state.copy(periodOffset = state.periodOffset - 1)
+                        },
+                        onNextPeriod = {
+                            next += 1
+                            state = state.copy(periodOffset = minOf(0, state.periodOffset + 1))
+                        },
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithTag("period_day").performClick()
+        compose.onNodeWithText("Today").assertIsDisplayed()
+        compose.onNodeWithTag("period_next").assertIsNotEnabled()
+        compose.onNodeWithTag("period_previous").performClick()
+        compose.onNodeWithText("Selected day").assertIsDisplayed()
+        compose.onNodeWithTag("period_next").assertIsEnabled().performClick()
+        compose.onNodeWithTag("period_next").assertIsNotEnabled()
+
+        assertEquals(listOf(DashboardPeriod.DAY), requested)
+        assertEquals(1, previous)
+        assertEquals(1, next)
     }
 
     @Test

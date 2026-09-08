@@ -5,13 +5,46 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /**
- * Locks the Monday-start week, local calendar month, and same-elapsed-day
- * comparison windows against day, month, year, leap, DST, and time-zone edges.
+ * Locks local-day, Monday-start week, local-month, historical-offset, and
+ * comparison windows against month, year, leap, DST, and time-zone edges.
  */
 class PeriodCalculatorTest {
     private val utc = TimeZone.UTC
+
+    @Test
+    fun dayUsesLocalMidnightBoundaries() {
+        val now = Instant.parse("2026-09-09T14:30:00Z").toEpochMilliseconds()
+        val range = PeriodCalculator.currentRange(now, utc, DashboardPeriod.DAY)
+        assertEquals(Instant.parse("2026-09-09T00:00:00Z").toEpochMilliseconds(), range.startInclusiveEpochMillis)
+        assertEquals(Instant.parse("2026-09-10T00:00:00Z").toEpochMilliseconds(), range.endExclusiveEpochMillis)
+    }
+
+    @Test
+    fun historicalOffsetsStepAcrossMultipleCalendarMonthsAndYear() {
+        val now = Instant.parse("2026-01-31T14:30:00Z").toEpochMilliseconds()
+        val range = PeriodCalculator.rangeAtOffset(now, utc, DashboardPeriod.MONTH, periodOffset = -2)
+        assertEquals(Instant.parse("2025-11-01T00:00:00Z").toEpochMilliseconds(), range.startInclusiveEpochMillis)
+        assertEquals(Instant.parse("2025-12-01T00:00:00Z").toEpochMilliseconds(), range.endExclusiveEpochMillis)
+    }
+
+    @Test
+    fun historicalComparisonUsesCompletePrecedingPeriod() {
+        val now = Instant.parse("2026-09-09T14:30:00Z").toEpochMilliseconds()
+        val range = PeriodCalculator.comparisonRange(now, utc, DashboardPeriod.WEEK, periodOffset = -1)
+        assertEquals(Instant.parse("2026-08-24T00:00:00Z").toEpochMilliseconds(), range.startInclusiveEpochMillis)
+        assertEquals(Instant.parse("2026-08-31T00:00:00Z").toEpochMilliseconds(), range.endExclusiveEpochMillis)
+    }
+
+    @Test
+    fun futureOffsetsAreRejected() {
+        val now = Instant.parse("2026-09-09T14:30:00Z").toEpochMilliseconds()
+        assertFailsWith<IllegalArgumentException> {
+            PeriodCalculator.rangeAtOffset(now, utc, DashboardPeriod.DAY, periodOffset = 1)
+        }
+    }
 
     @Test
     fun weekStartsMondayAtLocalMidnight() {

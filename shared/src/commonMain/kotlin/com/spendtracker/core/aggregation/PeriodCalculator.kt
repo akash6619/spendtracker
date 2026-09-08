@@ -11,11 +11,13 @@ import kotlinx.datetime.toLocalDateTime
 
 /**
  * Selects which calendar period the dashboard reports on.
- * Weeks run Monday 00:00 through the next Monday 00:00; months are local
- * calendar months. Both follow the supplied time zone, never UTC, so a device
- * time-zone change can regroup boundary transactions without losing data.
+ * Days run local midnight to midnight, weeks run Monday 00:00 through the next
+ * Monday 00:00, and months are local calendar months. All follow the supplied
+ * time zone, so a device time-zone change can regroup boundary transactions
+ * without losing data.
  */
 enum class DashboardPeriod {
+    DAY,
     WEEK,
     MONTH,
 }
@@ -48,11 +50,22 @@ object PeriodCalculator {
         timeZone: TimeZone,
         period: DashboardPeriod,
     ): DateRange {
-        val today = dateIn(nowEpochMillis, timeZone)
-        val start = when (period) {
-            DashboardPeriod.WEEK -> today.plus(DatePeriod(days = -(today.dayOfWeek.isoDayNumber - 1)))
-            DashboardPeriod.MONTH -> LocalDate(today.year, today.monthNumber, 1)
-        }
+        return rangeAtOffset(nowEpochMillis, timeZone, period, periodOffset = 0)
+    }
+
+    /**
+     * A current or earlier calendar window, where zero is current and each
+     * negative offset moves back one whole [period]. Future offsets are rejected.
+     */
+    fun rangeAtOffset(
+        nowEpochMillis: Long,
+        timeZone: TimeZone,
+        period: DashboardPeriod,
+        periodOffset: Int,
+    ): DateRange {
+        require(periodOffset <= 0) { "Future dashboard periods are not available" }
+        val currentStart = startOfPeriod(dateIn(nowEpochMillis, timeZone), period)
+        val start = shift(currentStart, period, periodOffset)
         return DateRange(startEpoch(start, timeZone), startEpoch(nextStart(start, period), timeZone))
     }
 
@@ -71,13 +84,10 @@ object PeriodCalculator {
         period: DashboardPeriod,
     ): DateRange {
         val today = dateIn(nowEpochMillis, timeZone)
-        val currentStart = when (period) {
-            DashboardPeriod.WEEK -> today.plus(DatePeriod(days = -(today.dayOfWeek.isoDayNumber - 1)))
-            DashboardPeriod.MONTH -> LocalDate(today.year, today.monthNumber, 1)
-        }
-        val previousStart = currentStart.plus(DatePeriod(months = if (period == DashboardPeriod.MONTH) -1 else 0))
-            .plus(DatePeriod(days = if (period == DashboardPeriod.WEEK) -7 else 0))
+        val currentStart = startOfPeriod(today, period)
+        val previousStart = shift(currentStart, period, -1)
         val elapsedDays = when (period) {
+            DashboardPeriod.DAY -> 0
             DashboardPeriod.WEEK -> today.dayOfWeek.isoDayNumber - 1
             DashboardPeriod.MONTH -> today.dayOfMonth - 1
         }
@@ -88,13 +98,45 @@ object PeriodCalculator {
         return DateRange(startEpoch(previousStart, timeZone), startEpoch(end, timeZone))
     }
 
+    /**
+     * Comparison range for the selected offset. The current period uses the
+     * same elapsed-day rule; a completed historical period uses its full
+     * immediately preceding calendar period.
+     */
+    fun comparisonRange(
+        nowEpochMillis: Long,
+        timeZone: TimeZone,
+        period: DashboardPeriod,
+        periodOffset: Int,
+    ): DateRange {
+        require(periodOffset <= 0) { "Future dashboard periods are not available" }
+        return if (periodOffset == 0) {
+            sameElapsedPreviousRange(nowEpochMillis, timeZone, period)
+        } else {
+            rangeAtOffset(nowEpochMillis, timeZone, period, periodOffset - 1)
+        }
+    }
+
     private fun dateIn(epochMillis: Long, timeZone: TimeZone): LocalDate =
         Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(timeZone).date
 
     private fun startEpoch(date: LocalDate, timeZone: TimeZone): Long =
         date.atStartOfDayIn(timeZone).toEpochMilliseconds()
 
+    private fun startOfPeriod(today: LocalDate, period: DashboardPeriod): LocalDate = when (period) {
+        DashboardPeriod.DAY -> today
+        DashboardPeriod.WEEK -> today.plus(DatePeriod(days = -(today.dayOfWeek.isoDayNumber - 1)))
+        DashboardPeriod.MONTH -> LocalDate(today.year, today.monthNumber, 1)
+    }
+
+    private fun shift(start: LocalDate, period: DashboardPeriod, offset: Int): LocalDate = when (period) {
+        DashboardPeriod.DAY -> start.plus(DatePeriod(days = offset))
+        DashboardPeriod.WEEK -> start.plus(DatePeriod(days = offset * 7))
+        DashboardPeriod.MONTH -> start.plus(DatePeriod(months = offset))
+    }
+
     private fun nextStart(start: LocalDate, period: DashboardPeriod): LocalDate = when (period) {
+        DashboardPeriod.DAY -> start.plus(DatePeriod(days = 1))
         DashboardPeriod.WEEK -> start.plus(DatePeriod(days = 7))
         DashboardPeriod.MONTH -> start.plus(DatePeriod(months = 1))
     }

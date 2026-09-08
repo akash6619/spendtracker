@@ -21,7 +21,8 @@ Run on the JVM without an emulator. Cover:
 - default inclusion policy and user override precedence;
 - source identity/deduplication behavior;
 - three-month cutoff boundary with an injected clock;
-- weekly/monthly ranges across month/year boundaries and time zones;
+- day/week/month ranges, historical offsets, and comparisons across month/year
+  boundaries and time zones;
 - aggregation by category and exclusion of non-INR amounts;
 - reparse behavior preserving user overrides.
 

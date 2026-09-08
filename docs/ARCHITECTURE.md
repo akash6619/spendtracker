@@ -54,9 +54,9 @@ Currently contains:
 - `TransactionRepository` observable read/upsert/edit/delete contract
 - `ImportCoordinator`, durable `ImportState`, and import repository contracts
 - Room 3 KMP entities, DAOs, database, repositories, version-3 schema, and migrations
-- `PeriodCalculator` and `ReportAggregator` for Monday-start week/local-month
-  windows, same-elapsed-day comparisons, category sums, and daily series with an
-  injected clock and time zone
+- `PeriodCalculator` and `ReportAggregator` for local day, Monday-start week,
+  and local-month windows; historical offsets; comparison ranges; category sums;
+  and daily series with an injected clock and time zone
 - Android, JVM, and iOS database builders using bundled SQLite
 - portable host-side tests
 
@@ -74,8 +74,8 @@ Currently contains:
 - immutable app/screen state and constructor-injected `AppViewModel`
 - lazy ledger rows, combined filters, and parsed transaction detail/editor
 - repository-backed category/inclusion overrides and explicit reset controls
-- weekly/monthly dashboard with period selector, comparison, category breakdown,
-  daily series, and deep links into filtered transactions
+- day/week/month dashboard with historical previous/next navigation, comparison,
+  category breakdown, daily series, and deep links into filtered transactions
 - light/dark Material theme, resources, reusable components, and previews
 - runtime `READ_SMS` permission request
 - `SmsInboxReader` implementing the shared `MessageSource` boundary

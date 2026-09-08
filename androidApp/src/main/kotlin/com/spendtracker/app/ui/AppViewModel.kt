@@ -100,7 +100,16 @@ class AppViewModel(
         updatePlatformPermission(granted, shouldShowRationale)
         // A backgrounded app may resume in a new time zone; period windows follow
         // the device zone, so recompute dashboard facts from the same stored data.
-        _uiState.update { it.copy(dashboard = computeDashboard(ledger, it.dashboard.period, it.usingDemoData)) }
+        _uiState.update {
+            it.copy(
+                dashboard = computeDashboard(
+                    ledger,
+                    it.dashboard.period,
+                    it.dashboard.periodOffset,
+                    it.usingDemoData,
+                ),
+            )
+        }
         resumeReconciliationPending = granted && !_uiState.value.isScanning
         maybeAutoStartInitialImport()
         maybeRunPendingReconciliation()
@@ -111,7 +120,21 @@ class AppViewModel(
     }
 
     fun onDashboardPeriodSelected(period: DashboardPeriod) {
-        _uiState.update { it.copy(dashboard = computeDashboard(ledger, period, it.usingDemoData)) }
+        _uiState.update { it.copy(dashboard = computeDashboard(ledger, period, 0, it.usingDemoData)) }
+    }
+
+    fun onDashboardPreviousPeriod() {
+        _uiState.update {
+            val offset = it.dashboard.periodOffset - 1
+            it.copy(dashboard = computeDashboard(ledger, it.dashboard.period, offset, it.usingDemoData))
+        }
+    }
+
+    fun onDashboardNextPeriod() {
+        _uiState.update {
+            val offset = minOf(0, it.dashboard.periodOffset + 1)
+            it.copy(dashboard = computeDashboard(ledger, it.dashboard.period, offset, it.usingDemoData))
+        }
     }
 
     fun onDashboardCategorySelected(category: SpendCategory) =
@@ -333,7 +356,9 @@ class AppViewModel(
         val usingDemoData = _uiState.value.usingDemoData
         _uiState.update {
             it.copy(
-                dashboard = computeDashboard(transactions, it.dashboard.period, usingDemoData),
+                dashboard = computeDashboard(
+                    transactions, it.dashboard.period, it.dashboard.periodOffset, usingDemoData,
+                ),
                 settings = it.settings.copy(
                     storedTransactionCount = if (usingDemoData) it.settings.storedTransactionCount else transactions.size,
                 ),
@@ -366,20 +391,22 @@ class AppViewModel(
     private fun computeDashboard(
         transactions: List<LedgerTransaction>,
         period: DashboardPeriod,
+        periodOffset: Int,
         isDemo: Boolean,
     ): DashboardUiState {
         if (transactions.isEmpty()) {
-            return DashboardUiState(period = period, isDemo = isDemo)
+            return DashboardUiState(period = period, periodOffset = periodOffset, isDemo = isDemo)
         }
         val zone = timeZone()
         val now = nowEpochMillis()
-        val currentRange = PeriodCalculator.currentRange(now, zone, period)
+        val currentRange = PeriodCalculator.rangeAtOffset(now, zone, period, periodOffset)
         val report = ReportAggregator.compute(transactions, currentRange, period, zone)
-        val previousRange = PeriodCalculator.sameElapsedPreviousRange(now, zone, period)
+        val previousRange = PeriodCalculator.comparisonRange(now, zone, period, periodOffset)
         val previous = ReportAggregator.compute(transactions, previousRange, period, zone)
         val comparison = ReportAggregator.compare(report.includedInrTotalMinor, previous.includedInrTotalMinor)
         return DashboardUiState(
             period = period,
+            periodOffset = periodOffset,
             report = report,
             comparison = comparison,
             hasTransactions = true,

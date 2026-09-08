@@ -67,13 +67,13 @@ data class ScanSummaryUiState(
 /**
  * Render-ready dashboard state for the selected reporting period.
  *
- * [report] carries the shared period facts (headline, categories, daily series,
- * counts); it is null only while the ledger is empty. [comparison] describes the
- * same-elapsed-days change versus the previous period and is null when there is
- * no baseline. Aggregation rules live in shared [PeriodReport] types.
+ * [periodOffset] is zero for the current calendar period and negative while
+ * browsing history. [report] carries the shared period facts; it is null only
+ * while the ledger is empty. Aggregation rules live in shared types.
  */
 data class DashboardUiState(
     val period: DashboardPeriod = DashboardPeriod.WEEK,
+    val periodOffset: Int = 0,
     val report: PeriodReport? = null,
     val comparison: PeriodComparison? = null,
     val hasTransactions: Boolean = false,

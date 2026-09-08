@@ -119,7 +119,7 @@ only rows the user has not edited, and user-edited rows are never overwritten
 - Base/reporting currency is INR.
 - Store every supported transaction in its original currency and minor units.
 - Never combine amounts of different currencies.
-- Weekly/monthly headline totals include INR records only.
+- Daily/weekly/monthly headline totals include INR records only.
 - Foreign records are visible with their original amount and a clear
   `Not included in INR total` explanation.
 - No network exchange-rate lookup and no implied rate based on today's market.

@@ -362,6 +362,56 @@ class AppViewModelTest {
     }
 
     @Test
+    fun dashboardCanBrowseDaysAndMultipleHistoricalWeeksWithoutEnteringFuture() = runTest {
+        val repository = InMemoryTransactionRepository(
+            listOf(
+                transaction("today", timestamp = "2026-09-09T08:00:00Z", amountMinor = 100_00),
+                transaction("previous-week", timestamp = "2026-09-01T08:00:00Z", amountMinor = 300_00),
+                transaction("two-weeks-back", timestamp = "2026-08-25T08:00:00Z", amountMinor = 200_00),
+            ),
+        )
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        vm.onDashboardPeriodSelected(DashboardPeriod.DAY)
+        assertEquals(100_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
+        assertEquals(0, vm.uiState.value.dashboard.periodOffset)
+
+        vm.onDashboardPeriodSelected(DashboardPeriod.WEEK)
+        vm.onDashboardPreviousPeriod()
+        assertEquals(-1, vm.uiState.value.dashboard.periodOffset)
+        assertEquals(300_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
+        assertEquals(200_00, vm.uiState.value.dashboard.comparison?.previousTotalMinor)
+
+        vm.onDashboardPreviousPeriod()
+        assertEquals(-2, vm.uiState.value.dashboard.periodOffset)
+        assertEquals(200_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
+
+        vm.onDashboardNextPeriod()
+        vm.onDashboardNextPeriod()
+        vm.onDashboardNextPeriod()
+        assertEquals(0, vm.uiState.value.dashboard.periodOffset)
+        assertEquals(100_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
+    }
+
+    @Test
+    fun historicalDashboardDeepLinkUsesTheSelectedRange() = runTest {
+        val repository = InMemoryTransactionRepository(
+            listOf(transaction("previous-week", timestamp = "2026-09-01T08:00:00Z")),
+        )
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        advanceUntilIdle()
+
+        vm.onDashboardPreviousPeriod()
+        val selectedRange = vm.uiState.value.dashboard.report!!.range
+        vm.onDashboardCategorySelected(SpendCategory.FOOD_AND_DINING)
+
+        assertEquals(selectedRange.startInclusiveEpochMillis, vm.uiState.value.transactions.filter.fromInclusive)
+        assertEquals(selectedRange.endExclusiveEpochMillis, vm.uiState.value.transactions.filter.toExclusive)
+        assertEquals(listOf("previous-week"), vm.uiState.value.transactions.transactions.map { it.sourceProviderId })
+    }
+
+    @Test
     fun dashboardComparisonPercentageUsesPreviousSameElapsedDays() = runTest {
         val repository = InMemoryTransactionRepository(
             listOf(

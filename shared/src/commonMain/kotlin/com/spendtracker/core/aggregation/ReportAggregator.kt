@@ -52,9 +52,9 @@ data class PeriodReport(
 )
 
 /**
- * Headline comparison between the current window and the same elapsed days of
- * the previous period. [deltaPercent] is null when the previous total is zero,
- * because no meaningful percentage exists for an empty baseline.
+ * Headline comparison between a selected window and its comparison window.
+ * [deltaPercent] is null when the previous total is zero, because no meaningful
+ * percentage exists for an empty baseline.
  */
 data class PeriodComparison(
     val currentTotalMinor: Long,

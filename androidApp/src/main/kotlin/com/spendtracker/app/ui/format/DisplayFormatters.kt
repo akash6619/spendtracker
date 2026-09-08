@@ -27,12 +27,20 @@ fun formatDate(epochMillis: Long): String =
         .withZone(ZoneId.systemDefault())
         .format(Instant.ofEpochMilli(epochMillis))
 
-/** Half-open period shown as "start – last day" using the device time zone. */
+/**
+ * Half-open period shown using the device time zone. A single-day period uses
+ * one date; longer periods use "start – last day".
+ */
 fun formatRange(startInclusiveEpochMillis: Long, endExclusiveEpochMillis: Long): String {
     val zone = ZoneId.systemDefault()
+    val formatter = DateTimeFormatter.ofPattern("d MMM yyyy")
+    val startDay = Instant.ofEpochMilli(startInclusiveEpochMillis).atZone(zone).toLocalDate()
     val lastDay = Instant.ofEpochMilli(endExclusiveEpochMillis).atZone(zone).toLocalDate().minusDays(1)
-    return formatDate(startInclusiveEpochMillis) + " – " +
-        DateTimeFormatter.ofPattern("d MMM yyyy").withZone(zone).format(lastDay)
+    return if (startDay == lastDay) {
+        formatter.format(startDay)
+    } else {
+        "${formatter.format(startDay)} – ${formatter.format(lastDay)}"
+    }
 }
 
 /** Day label for one daily-series bar, e.g. "3 Sep 2026". */

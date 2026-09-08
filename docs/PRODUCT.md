@@ -5,7 +5,7 @@
 Give a person a trustworthy view of everyday spending without requiring bank
 credentials, an account, or uploading their messages. The Android app detects
 financial SMS locally, turns supported messages into transactions, groups
-spending into understandable categories, and shows weekly and monthly trends.
+spending into understandable categories, and shows daily, weekly, and monthly trends.
 
 The experience is inspired by SMS-based money-management apps such as Axio, but
 the first release deliberately favors privacy, understandable rules, and manual

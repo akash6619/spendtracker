@@ -313,3 +313,22 @@ entry that records the reason, migration impact, and affected tests.
   system permission. No schema change; the fingerprint key is removed so future
   re-imports start with fresh identities. Manual reconciliation is not offered
   because new-message pickup is already automatic on open (D-020).
+
+## D-022 — Historical calendar-period dashboard navigation
+
+- Date: 2026-09-08
+- Status: Accepted and validated
+- Decision: The dashboard offers Day, Week, and Month calendar granularities.
+  Each selection starts at the current local-calendar period. Previous can move
+  backward repeatedly; Next moves toward the current period and is unavailable
+  there, so the dashboard never presents a future period. Current periods retain
+  the D-016 same-elapsed-day comparison; a completed historical period compares
+  with its full immediately preceding period.
+- Reason: Users need to inspect individual dates and older reporting windows,
+  while discrete calendar navigation keeps boundaries reproducible and avoids
+  ambiguous free-form ranges in headline comparisons.
+- Consequence: The ViewModel stores a non-positive period offset and recomputes
+  ranges through shared calendar math using the current device time zone.
+  Changing granularity resets the offset to zero. Dashboard-to-Transactions links
+  carry the exact selected half-open range. This changes reporting navigation,
+  not the three-calendar-month initial SMS import or data-retention policy.

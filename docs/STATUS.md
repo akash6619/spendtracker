@@ -85,7 +85,8 @@ Agents must claim work here before implementation and clear the row at handoff.
   injected instant and time zone; DST transitions only change elapsed hours.
 - Shared `ReportAggregator` derives included-INR headline, exact category sums,
   daily series, and foreign/excluded/review counts from the observed ledger.
-- Dashboard period selector (Week/Month), headline with previous-period
+- Dashboard period selector (Day/Week/Month) with repeated previous/next calendar
+  navigation, headline with previous-period
   percentage, category breakdown with shares, accessible daily-spend bars, and
   explicit no-INR and empty states.
 - Category, excluded, foreign, and review facts deep link to Transactions with
@@ -330,6 +331,14 @@ Logcat or fixtures. MVP-10 remains open and will be rerun after planned UI and
 parser/classification enhancements. Remaining release work also includes a
 signed artifact, physical phone/OEM-provider validation (including a real
 incoming financial SMS), and Google Play restricted-SMS permission review.
+
+On 2026-09-08, ENH-01 added a local-calendar Day view and historical navigation
+across multiple days, Monday-start weeks, and months. Next is disabled at the
+current period; switching Day/Week/Month returns to current; completed historical
+periods compare with the full immediately preceding period. Dashboard fact links
+continue to open Transactions with the exact selected range. Shared/JVM and
+Android unit tests, Android UI-test compilation, lint, debug assembly, and the
+full connected suite passed on the API 37 `SpendTracker_API_37` emulator.
 
 ## Known gaps
 

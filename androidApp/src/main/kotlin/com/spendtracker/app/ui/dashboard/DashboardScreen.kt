@@ -1,5 +1,6 @@
 package com.spendtracker.app.ui.dashboard
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -58,6 +59,8 @@ import kotlin.math.roundToInt
  */
 data class DashboardActions(
     val onPeriodSelected: (DashboardPeriod) -> Unit = {},
+    val onPreviousPeriod: () -> Unit = {},
+    val onNextPeriod: () -> Unit = {},
     val onCategorySelected: (SpendCategory) -> Unit = {},
     val onExcludedSelected: () -> Unit = {},
     val onForeignSelected: () -> Unit = {},
@@ -83,6 +86,7 @@ fun DashboardScreen(
         if (state.isDemo) DemoBanner()
 
         PeriodSelector(state.period, actions.onPeriodSelected)
+        PeriodNavigation(state, actions)
 
         val report = state.report
         if (report == null) {
@@ -101,7 +105,7 @@ fun DashboardScreen(
             if (report.categoryBreakdown.isNotEmpty()) {
                 CategoryBreakdownCard(report, actions)
             }
-            DailySpendCard(report)
+            if (report.period != DashboardPeriod.DAY) DailySpendCard(report)
         }
     }
 }
@@ -115,15 +119,41 @@ private fun PeriodSelector(selected: DashboardPeriod, onSelected: (DashboardPeri
                 onClick = { onSelected(period) },
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = DashboardPeriod.entries.size),
                 modifier = Modifier.testTag(
-                    if (period == DashboardPeriod.WEEK) "period_week" else "period_month",
+                    "period_${period.name.lowercase()}",
                 ),
             ) {
-                Text(
-                    stringResource(
-                        if (period == DashboardPeriod.WEEK) R.string.period_week else R.string.period_month,
-                    ),
-                )
+                Text(stringResource(period.labelResource()))
             }
+        }
+    }
+}
+
+@Composable
+private fun PeriodNavigation(state: DashboardUiState, actions: DashboardActions) {
+    val periodWord = stringResource(state.period.wordResource())
+    val previousDescription = stringResource(R.string.period_previous_cd, periodWord)
+    val nextDescription = stringResource(R.string.period_next_cd, periodWord)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(
+            onClick = actions.onPreviousPeriod,
+            modifier = Modifier
+                .testTag("period_previous")
+                .semantics { contentDescription = previousDescription },
+        ) {
+            Text(stringResource(R.string.period_previous))
+        }
+        TextButton(
+            onClick = actions.onNextPeriod,
+            enabled = state.periodOffset < 0,
+            modifier = Modifier
+                .testTag("period_next")
+                .semantics { contentDescription = nextDescription },
+        ) {
+            Text(stringResource(R.string.period_next))
         }
     }
 }
@@ -140,9 +170,7 @@ private fun HeadlineCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                stringResource(
-                    if (state.period == DashboardPeriod.WEEK) R.string.dashboard_this_week else R.string.dashboard_this_month,
-                ),
+                stringResource(state.titleResource()),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
@@ -194,11 +222,13 @@ private fun HeadlineCard(
 @Composable
 private fun ComparisonLine(state: DashboardUiState) {
     val comparison = state.comparison ?: return
-    val periodWord = stringResource(
-        if (state.period == DashboardPeriod.WEEK) R.string.period_week_word else R.string.period_month_word,
-    )
+    val periodWord = stringResource(state.period.wordResource())
     val text = comparison.deltaPercent?.let { percent ->
-        stringResource(R.string.comparison_format, percent, periodWord)
+        stringResource(
+            if (state.periodOffset == 0) R.string.comparison_format else R.string.comparison_full_format,
+            percent,
+            periodWord,
+        )
     } ?: stringResource(R.string.comparison_none, periodWord)
     Text(
         text,
@@ -342,6 +372,14 @@ private fun RowScope.Bar(day: DailySpend, max: Long, index: Int) {
 
 @Preview(showBackground = true)
 @Composable
+private fun DashboardDayPreview() {
+    SpendTrackerTheme {
+        DashboardScreen(dashboardUiState(DashboardPeriod.DAY))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
 private fun DashboardContentPreview() {
     SpendTrackerTheme {
         DashboardScreen(dashboardUiState(DashboardPeriod.WEEK))
@@ -415,4 +453,33 @@ private fun dashboardUiState(period: DashboardPeriod): DashboardUiState {
         hasTransactions = true,
         isDemo = true,
     )
+}
+
+@StringRes
+private fun DashboardPeriod.labelResource(): Int = when (this) {
+    DashboardPeriod.DAY -> R.string.period_day
+    DashboardPeriod.WEEK -> R.string.period_week
+    DashboardPeriod.MONTH -> R.string.period_month
+}
+
+@StringRes
+private fun DashboardPeriod.wordResource(): Int = when (this) {
+    DashboardPeriod.DAY -> R.string.period_day_word
+    DashboardPeriod.WEEK -> R.string.period_week_word
+    DashboardPeriod.MONTH -> R.string.period_month_word
+}
+
+@StringRes
+private fun DashboardUiState.titleResource(): Int = if (periodOffset == 0) {
+    when (period) {
+        DashboardPeriod.DAY -> R.string.dashboard_today
+        DashboardPeriod.WEEK -> R.string.dashboard_this_week
+        DashboardPeriod.MONTH -> R.string.dashboard_this_month
+    }
+} else {
+    when (period) {
+        DashboardPeriod.DAY -> R.string.dashboard_selected_day
+        DashboardPeriod.WEEK -> R.string.dashboard_selected_week
+        DashboardPeriod.MONTH -> R.string.dashboard_selected_month
+    }
 }

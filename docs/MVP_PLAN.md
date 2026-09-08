@@ -27,6 +27,7 @@ slice begins.
 | MVP-08 | New-message ingestion and reconciliation | Complete | MVP-03, MVP-04 | New financial SMS updates the ledger once |
 | MVP-09 | Privacy/settings and data lifecycle | Complete | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Ready | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
+| ENH-01 | Historical day/week/month dashboard ranges | Complete | MVP-07 | Users can browse earlier calendar days, weeks, and months |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices
@@ -485,6 +486,46 @@ stored data, import status, and currency limitations.
 ### Not in this slice
 
 Cloud export, account deletion, or sync privacy controls.
+
+---
+
+## ENH-01 — Historical day/week/month dashboard ranges
+
+**Status:** Complete
+**Depends on:** MVP-07
+
+### Goal
+
+Let users inspect dashboard totals and matching transactions for individual
+calendar days and for earlier weeks and months, instead of limiting reporting to
+the current week or month.
+
+### Deliverables
+
+- Add Day alongside Week and Month dashboard periods.
+- Add previous/next calendar-period navigation, with future periods unavailable.
+- Keep current partial-period comparisons like-for-like; compare a completed
+  historical period with the complete immediately preceding period.
+- Preserve dashboard-to-transaction deep links using the visibly selected range.
+
+### Acceptance criteria
+
+- [x] Day, week, and month boundaries use local calendar midnights.
+- [x] Users can step backward through multiple periods and return toward today.
+- [x] The next action is disabled while the current period is selected.
+- [x] Period changes reset to the current period; changing granularity never
+      carries an ambiguous offset into the new calendar unit.
+- [x] Category, excluded, and foreign links reproduce the selected historical range.
+
+### Test gate
+
+- [x] Shared tests cover day boundaries, historical offsets, full preceding
+      comparisons, month/year/leap edges, and time zones.
+- [x] ViewModel tests cover period switching, repeated navigation, future guard,
+      comparison totals, and deep-link ranges.
+- [x] Compose tests cover Day selection and previous/next control state.
+- [x] Shared/JVM, Android unit, lint, debug assembly, and the API 37 connected
+      test suite pass.
 
 ---
 

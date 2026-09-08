@@ -31,12 +31,22 @@
 
     <string name="dashboard_title">Dashboard</string>
     <string name="dashboard_subtitle">A private snapshot of recognized spending</string>
+    <string name="period_day">Day</string>
     <string name="period_week">Week</string>
     <string name="period_month">Month</string>
+    <string name="period_day_word">day</string>
     <string name="period_week_word">week</string>
     <string name="period_month_word">month</string>
+    <string name="dashboard_today">Today</string>
     <string name="dashboard_this_week">This week</string>
     <string name="dashboard_this_month">This month</string>
+    <string name="dashboard_selected_day">Selected day</string>
+    <string name="dashboard_selected_week">Selected week</string>
+    <string name="dashboard_selected_month">Selected month</string>
+    <string name="period_previous">Previous</string>
+    <string name="period_next">Next</string>
+    <string name="period_previous_cd">Show previous %1$s</string>
+    <string name="period_next_cd">Show next %1$s</string>
     <plurals name="included_transaction_count">
         <item quantity="one">%1$d included transaction</item>
         <item quantity="other">%1$d included transactions</item>
@@ -55,6 +65,7 @@
     </plurals>
     <string name="comparison_format">%1$+d%% compared with the same number of days in the previous %2$s</string>
     <string name="comparison_none">No comparable spend in the previous %1$s</string>
+    <string name="comparison_full_format">%1$+d%% compared with the previous %2$s</string>
     <string name="link_category_cd">View %1$s transactions in this period</string>
     <string name="link_excluded_cd">View excluded transactions in this period</string>
     <string name="link_foreign_cd">View foreign-currency transactions in this period</string>

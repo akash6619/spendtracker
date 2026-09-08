@@ -74,6 +74,8 @@ fun SpendTrackerApp(
         ),
         dashboardActions = DashboardActions(
             onPeriodSelected = viewModel::onDashboardPeriodSelected,
+            onPreviousPeriod = viewModel::onDashboardPreviousPeriod,
+            onNextPeriod = viewModel::onDashboardNextPeriod,
             onCategorySelected = viewModel::onDashboardCategorySelected,
             onExcludedSelected = viewModel::onDashboardExcludedSelected,
             onForeignSelected = viewModel::onDashboardForeignSelected,
