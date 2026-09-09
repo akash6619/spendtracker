@@ -44,6 +44,7 @@ import com.spendtracker.app.ui.format.formatRange
 import com.spendtracker.app.ui.format.labelResource
 import com.spendtracker.app.ui.format.weekdayShortLabel
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 import com.spendtracker.core.aggregation.DashboardPeriod
 import com.spendtracker.core.aggregation.DailySpend
 import com.spendtracker.core.aggregation.PeriodReport
@@ -76,12 +77,11 @@ fun DashboardScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(SpendTrackerSpacing.PageMargin),
+        verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
     ) {
         ScreenHeader(
             title = stringResource(R.string.dashboard_title),
-            subtitle = stringResource(R.string.dashboard_subtitle),
         )
         if (state.isDemo) DemoBanner()
 

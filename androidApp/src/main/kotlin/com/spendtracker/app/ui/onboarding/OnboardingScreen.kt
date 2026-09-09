@@ -32,6 +32,7 @@ import com.spendtracker.app.ui.PermissionUiState
 import com.spendtracker.app.ui.UiTestTags
 import com.spendtracker.app.ui.components.InfoCard
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 
 @Composable
 fun OnboardingScreen(
@@ -47,8 +48,8 @@ fun OnboardingScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+            .padding(SpendTrackerSpacing.PageMargin),
+        verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
     ) {
         Icon(
             imageVector = Icons.Outlined.Lock,

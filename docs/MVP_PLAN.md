@@ -28,6 +28,7 @@ slice begins.
 | MVP-09 | Privacy/settings and data lifecycle | Complete | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Ready | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
 | ENH-01 | Historical day/week/month dashboard ranges | Complete | MVP-07 | Users can browse earlier calendar days, weeks, and months |
+| UI-01 | Compact design foundation | Complete | UI-00 | Shared compact tokens, responsive panes, reusable rows, and refined navigation |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices
@@ -526,6 +527,47 @@ the current week or month.
 - [x] Compose tests cover Day selection and previous/next control state.
 - [x] Shared/JVM, Android unit, lint, debug assembly, and the API 37 connected
       test suite pass.
+
+---
+
+## UI-01 — Compact design foundation
+
+**Status:** Complete
+**Depends on:** UI-00 visual direction and reference baseline
+
+### Goal
+
+Establish the approved balanced-ledger design language as shared Compose tokens
+and components without changing navigation behavior or UI-state contracts.
+
+### Deliverables
+
+- Named spacing, width, shape, and typography tokens based on UI-00.
+- Reusable content-pane, compact section-heading, status/banner, and grouped-row
+  components.
+- Compact page headers with optional subtitles and centered maximum content
+  widths on primary screens.
+- Refined labeled bottom navigation with standard touch targets.
+- Representative narrow, normal, wide, light/dark, and increased-font previews.
+
+### Acceptance criteria
+
+- [x] Primary content does not stretch indefinitely on a wide viewport.
+- [x] New layout spacing comes from shared tokens rather than scattered large
+      literals.
+- [x] Interactive controls retain at least 48 dp targets.
+- [x] Page title, section title, body, metadata, warning, and destructive
+      treatments are visually distinct.
+- [x] Navigation behavior and UI-state contracts remain unchanged.
+
+### Test gate
+
+- [x] Compose coverage verifies pane width, optional page subtitles, grouped-row
+      interaction, and top-level navigation.
+- [x] Shared/JVM and Android unit tests, lint, debug assembly, and Android UI-test
+      compilation pass.
+- [x] Connected Compose tests and representative visual checks pass when an
+      emulator or device is available.
 
 ---
 

@@ -32,6 +32,7 @@ import com.spendtracker.app.ui.format.formatDate
 import com.spendtracker.app.ui.format.formatMoney
 import com.spendtracker.app.ui.format.labelResource
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.TransactionFilter
@@ -50,13 +51,12 @@ fun TransactionsScreen(
     if (showFilters) FilterDialog(state.filter, { actions.filter(it); showFilters = false }, { showFilters = false })
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(SpendTrackerSpacing.PageMargin),
+        verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
     ) {
         item {
             ScreenHeader(
                 title = stringResource(R.string.transactions_title),
-                subtitle = stringResource(R.string.transactions_subtitle),
             )
         }
         if (state.isDemo) item { DemoBanner() }

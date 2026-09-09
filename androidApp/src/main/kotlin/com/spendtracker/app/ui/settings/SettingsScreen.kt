@@ -33,6 +33,7 @@ import com.spendtracker.app.ui.components.InfoCard
 import com.spendtracker.app.ui.components.ScreenHeader
 import com.spendtracker.app.ui.format.formatDate
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 
 /**
  * Intents the settings/privacy screen emits to the ViewModel.
@@ -59,12 +60,11 @@ fun SettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(SpendTrackerSpacing.PageMargin),
+        verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
     ) {
         ScreenHeader(
             title = stringResource(R.string.settings_title),
-            subtitle = stringResource(R.string.settings_subtitle),
         )
         if (state.usingDemoData) DemoBanner()
 

@@ -1,9 +1,10 @@
 # Current status
 
-- Last updated: 2026-09-07
+- Last updated: 2026-09-09
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
-- Next recommended work: UI enhancement and parser/classification refinement.
+- Next recommended work: UI-02 dense transaction browsing/detail and
+  parser/classification refinement.
   Resume the open MVP-10 hardening and controlled-release gate after those
   enhancements stabilize.
 - Active work: none
@@ -50,6 +51,12 @@ Agents must claim work here before implementation and clear the row at handoff.
   cannot construct it.
 - Empty, loading, content, and error previews for primary screens.
 - Android strings/plurals resources and a minimal light/dark Material theme.
+- UI-01 compact design foundation: named spacing and responsive-width tokens,
+  an explicit compact typography/shape scale, centered 600/720 dp content
+  panes, optional compact page subtitles, labeled tonal bottom navigation, and
+  reusable section-heading, status-banner, and 48 dp grouped-row components.
+  Representative previews cover 320/360/412/840 dp widths, dark theme, and
+  150% font scale without changing navigation or screen-state contracts.
 - Runtime `READ_SMS` permission request only after an explicit privacy disclosure
   and user action.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
@@ -339,6 +346,17 @@ periods compare with the full immediately preceding period. Dashboard fact links
 continue to open Transactions with the exact selected range. Shared/JVM and
 Android unit tests, Android UI-test compilation, lint, debug assembly, and the
 full connected suite passed on the API 37 `SpendTracker_API_37` emulator.
+
+On 2026-09-09, UI-01 applied the approved balanced-ledger foundation across the
+app shell. Primary screens are centered and width-constrained, destination
+headers omit redundant subtitles, outer spacing uses shared compact tokens, and
+bottom navigation retains visible labels and Material touch targets. New
+component tests verify the 720 dp wide-pane limit, optional subtitles, grouped
+row clicks, and the 48 dp minimum row target. The full shared/JVM and Android
+unit, lint, and debug-assembly gate passed. All 27 connected tests passed on the
+API 37 `SpendTracker_API_37` emulator. A fresh-install onboarding screen was
+visually inspected at the normal emulator viewport; the complete responsive,
+dark-theme, and font-scale visual matrix remains the UI-05 release gate.
 
 ## Known gaps
 

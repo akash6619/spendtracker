@@ -47,16 +47,13 @@ class SpendTrackerAppTest {
             }
         }
 
-        composeRule.onNodeWithText("A private snapshot of recognized spending")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("No recognized spend yet").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_TRANSACTIONS).performClick()
-        composeRule.onNodeWithText("Recognized records stored privately on this device")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("Filters").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_SETTINGS).performClick()
         composeRule.onNodeWithText("Local-only MVP").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_DASHBOARD).performClick()
-        composeRule.onNodeWithText("A private snapshot of recognized spending")
-            .assertIsDisplayed()
+        composeRule.onNodeWithText("No recognized spend yet").assertIsDisplayed()
     }
 
     @Test
