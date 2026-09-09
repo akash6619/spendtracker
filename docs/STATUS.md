@@ -3,7 +3,7 @@
 - Last updated: 2026-09-09
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
-- Next recommended work: UI-02 dense transaction browsing/detail and
+- Next recommended work: UI-03 compact dashboard hierarchy and
   parser/classification refinement.
   Resume the open MVP-10 hardening and controlled-release gate after those
   enhancements stabilize.
@@ -57,6 +57,12 @@ Agents must claim work here before implementation and clear the row at handoff.
   reusable section-heading, status-banner, and 48 dp grouped-row components.
   Representative previews cover 320/360/412/840 dp widths, dark theme, and
   150% font scale without changing navigation or screen-state contracts.
+- UI-02 dense ledger and detail: lazy divided 68 dp transaction rows show
+  merchant/amount, category/date, category markers, and explicit foreign or
+  excluded badges; amounts stack below metadata at narrow widths or 130%+
+  font scale. A compact filter toolbar reports active dimensions. Transaction
+  detail now has a compact top bar, category-tinted summary/editor, aligned fact
+  rows, prominent save action, and adjacent ephemeral-source explanation.
 - Runtime `READ_SMS` permission request only after an explicit privacy disclosure
   and user action.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
@@ -357,6 +363,17 @@ unit, lint, and debug-assembly gate passed. All 27 connected tests passed on the
 API 37 `SpendTracker_API_37` emulator. A fresh-install onboarding screen was
 visually inspected at the normal emulator viewport; the complete responsive,
 dark-theme, and font-scale visual matrix remains the UI-05 release gate.
+
+On 2026-09-09, UI-02 replaced individual ledger cards with lazy divided rows
+while preserving filter, edit, source lookup, and dashboard deep-link contracts.
+The normal API 37 viewport shows five synthetic rows above navigation; at 150%
+font scale four complete rows remain visible, with amounts stacked to prevent
+merchant collisions. Normal and 150% ledger/detail screens were visually
+checked with no clipped values, badges, toggles, or save action, and the emulator
+font scale was restored. The shared/JVM and Android unit, lint, debug assembly,
+and UI-test compilation gate passed. All 28 connected tests passed on the API 37
+`SpendTracker_API_37` emulator, including explicit foreign/excluded spoken-row
+descriptions and compact filter-state coverage.
 
 ## Known gaps
 

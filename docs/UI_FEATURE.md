@@ -5,7 +5,7 @@
 - Backlog feature: UI enhancements and polish
 - Current state: Ready for implementation
 - Product scope: presentation and usability only
-- Implementation status: UI-00 and UI-01 complete; UI-02 ready
+- Implementation status: UI-00 through UI-02 complete; UI-03 ready
 
 This document shapes the first feature in `FEATURES.md` independently from the
 MVP release slices. Before implementation begins, the selected UI slice must be
@@ -17,8 +17,8 @@ added to `MVP_PLAN.md` and claimed in the `STATUS.md` active-work table.
 | --- | --- | --- | --- | --- | --- |
 | UI-00 | Visual direction and reference baseline | Done | — | An approved compact visual language supported by representative screen concepts and design tokens | Preserve the approved decisions in UI-01 implementation and visual checks |
 | UI-01 | Compact design foundation | Done | UI-00 | Shared spacing, typography, width, container, and navigation patterns | Preserve the foundation while applying it to individual screens |
-| UI-02 | Dense transaction browsing and detail | Ready | UI-01 | More ledger rows visible with clearer filtering, editing, and source access | Apply the foundation to the transaction list and detail flow |
-| UI-03 | Compact dashboard hierarchy | Planned | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently | Apply the foundation and approved dashboard concept |
+| UI-02 | Dense transaction browsing and detail | Done | UI-01 | More ledger rows visible with clearer filtering, editing, and source access | Preserve behavior and row semantics while later slices evolve |
+| UI-03 | Compact dashboard hierarchy | Ready | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently | Apply the foundation and approved dashboard concept |
 | UI-04 | Onboarding and settings simplification | Planned | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling | Apply established components after the main financial screens stabilize |
 | UI-05 | Accessibility and visual release gate | Planned | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens | Run the complete viewport, theme, font-scale, TalkBack, and device matrix |
 
@@ -192,13 +192,13 @@ direction is explicitly accepted or revised.
 
 ### Acceptance criteria
 
-- [ ] At least four typical transaction rows are visible above bottom
+- [x] At least four typical transaction rows are visible above bottom
       navigation on a normal phone viewport.
-- [ ] Merchant and amount do not collide at common widths.
-- [ ] Large text may expand rows but does not clip monetary values, statuses,
+- [x] Merchant and amount do not collide at common widths.
+- [x] Large text may expand rows but does not clip monetary values, statuses,
       filters, or save actions.
-- [ ] Foreign and excluded status remains visible and announced.
-- [ ] Filtering, editing, source lookup, and dashboard deep links retain their
+- [x] Foreign and excluded status remains visible and announced.
+- [x] Filtering, editing, source lookup, and dashboard deep links retain their
       current behavior.
 
 ## UI-03 - Compact dashboard hierarchy

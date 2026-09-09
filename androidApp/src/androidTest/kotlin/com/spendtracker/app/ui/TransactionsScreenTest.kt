@@ -32,6 +32,7 @@ class TransactionsScreenTest {
         compose.onNodeWithText("Spend: All").performScrollTo().performClick()
         compose.onNodeWithText("Excluded from spend").performClick()
         compose.onNodeWithText("Apply filters").performClick()
+        compose.onNodeWithText("Filters · 2 active").assertIsDisplayed()
         compose.onNodeWithText("No matching transactions").assertIsDisplayed()
         compose.onNodeWithText("Clear filters").performClick()
         compose.onNodeWithText(PreviewData.transaction.merchant!!).assertIsDisplayed()
@@ -60,9 +61,38 @@ class TransactionsScreenTest {
         compose.onNodeWithText("Travel").performScrollTo().performClick()
         compose.onNodeWithTag("inclusion_toggle").performScrollTo().performClick()
         compose.onNodeWithText("Save changes").performScrollTo().performClick()
-        compose.onNodeWithText("Excluded by default: credits, refunds, transfers, withdrawals, and unknown events are not ordinary spend.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Back to transactions").performScrollTo().performClick()
+        compose.onNodeWithText("Excluded from spend").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("detail_back").performClick()
         compose.onNodeWithText("Filters").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactLedgerShowsFourRowsAndAnnouncesExcludedAndForeignStatus() {
+        val included = PreviewData.transaction
+        val rows = listOf(
+            included,
+            included.copy(id = "excluded", merchant = "City ATM", includedInSpend = false),
+            included.copy(
+                id = "foreign",
+                merchant = "Example Airways",
+                money = Money(125_00, CurrencyCode.USD),
+            ),
+            included.copy(id = "transport", merchant = "Metro Pass"),
+            included.copy(id = "grocer", merchant = "Corner Grocer"),
+        )
+        compose.setContent {
+            SpendTrackerTheme { TransactionsScreen(TransactionsUiState(transactions = rows)) }
+        }
+
+        rows.take(4).forEach { row ->
+            compose.onNodeWithTag("transaction_row_${row.id}").assertIsDisplayed()
+        }
+        compose.onNodeWithContentDescription(
+            "City ATM, ₹685.00, Food & dining, 4 Sep 2026, Excluded from spend",
+        ).assertIsDisplayed()
+        compose.onNodeWithContentDescription(
+            "Example Airways, US$125.00, Food & dining, 4 Sep 2026, Not included in INR total",
+        ).assertIsDisplayed()
     }
 
     @Test

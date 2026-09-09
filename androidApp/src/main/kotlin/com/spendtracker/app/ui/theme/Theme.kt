@@ -45,8 +45,8 @@ private val SpendTrackerShapes = Shapes(
 private val SpendTrackerTypography = Typography().run {
     copy(
         headlineSmall = headlineSmall.copy(
-            fontSize = 24.sp,
-            lineHeight = 30.sp,
+            fontSize = 22.sp,
+            lineHeight = 28.sp,
             fontWeight = FontWeight.SemiBold,
         ),
         titleMedium = titleMedium.copy(fontWeight = FontWeight.SemiBold),
