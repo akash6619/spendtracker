@@ -3,7 +3,7 @@
 - Last updated: 2026-09-09
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
-- Next recommended work: UI-03 compact dashboard hierarchy and
+- Next recommended work: UI-04 onboarding/settings simplification and
   parser/classification refinement.
   Resume the open MVP-10 hardening and controlled-release gate after those
   enhancements stabilize.
@@ -63,6 +63,11 @@ Agents must claim work here before implementation and clear the row at handoff.
   font scale. A compact filter toolbar reports active dimensions. Transaction
   detail now has a compact top bar, category-tinted summary/editor, aligned fact
   rows, prominent save action, and adjacent ephemeral-source explanation.
+- UI-03 compact dashboard hierarchy: period controls stay concise; one summary
+  surface combines range, total, count, comparison, navigation, and tappable
+  exception facts. Category actions are dense divided rows, daily trends use a
+  shorter accessible chart with an explicit zero state, and 720 dp layouts place
+  category and trend panels side by side.
 - Runtime `READ_SMS` permission request only after an explicit privacy disclosure
   and user action.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
@@ -374,6 +379,13 @@ font scale was restored. The shared/JVM and Android unit, lint, debug assembly,
 and UI-test compilation gate passed. All 28 connected tests passed on the API 37
 `SpendTracker_API_37` emulator, including explicit foreign/excluded spoken-row
 descriptions and compact filter-state coverage.
+
+On 2026-09-09, UI-03 consolidated the dashboard hierarchy and kept all period
+navigation and exact-filter deep links intact. The populated month dashboard was
+visually checked on the API 37 emulator: total, comparison, exception facts,
+three category rows, and the daily chart fit above navigation at the normal
+viewport. Shared/JVM and Android unit tests, lint, debug assembly, Android UI
+test compilation, and all 28 connected tests passed.
 
 ## Known gaps
 

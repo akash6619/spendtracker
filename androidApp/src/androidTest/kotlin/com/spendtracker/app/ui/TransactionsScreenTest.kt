@@ -30,7 +30,7 @@ class TransactionsScreenTest {
         compose.onNodeWithText("Currency: All").performScrollTo().performClick()
         compose.onNodeWithText("JPY").performClick()
         compose.onNodeWithText("Spend: All").performScrollTo().performClick()
-        compose.onNodeWithText("Excluded from spend").performClick()
+        compose.onNodeWithText("Excluded").performClick()
         compose.onNodeWithText("Apply filters").performClick()
         compose.onNodeWithText("Filters · 2 active").assertIsDisplayed()
         compose.onNodeWithText("No matching transactions").assertIsDisplayed()
@@ -61,7 +61,7 @@ class TransactionsScreenTest {
         compose.onNodeWithText("Travel").performScrollTo().performClick()
         compose.onNodeWithTag("inclusion_toggle").performScrollTo().performClick()
         compose.onNodeWithText("Save changes").performScrollTo().performClick()
-        compose.onNodeWithText("Excluded from spend").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Excluded").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("detail_back").performClick()
         compose.onNodeWithText("Filters").assertIsDisplayed()
     }
@@ -88,10 +88,10 @@ class TransactionsScreenTest {
             compose.onNodeWithTag("transaction_row_${row.id}").assertIsDisplayed()
         }
         compose.onNodeWithContentDescription(
-            "City ATM, ₹685.00, Food & dining, 4 Sep 2026, Excluded from spend",
+            "City ATM, ₹685.00, Food & dining, 4 Sep 2026, Excluded",
         ).assertIsDisplayed()
         compose.onNodeWithContentDescription(
-            "Example Airways, US$125.00, Food & dining, 4 Sep 2026, Not included in INR total",
+            "Example Airways, US$125.00, Food & dining, 4 Sep 2026, Foreign",
         ).assertIsDisplayed()
     }
 

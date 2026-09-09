@@ -50,10 +50,10 @@ import com.spendtracker.app.ui.format.formatMoney
 import com.spendtracker.app.ui.format.labelResource
 import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendCategoryPalette
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.Money
-import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionFilter
 
 @Composable
@@ -224,8 +224,13 @@ private fun TransactionRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 68.dp)
-                    .padding(vertical = SpendTrackerSpacing.RelatedGap),
-                horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
+                    .padding(
+                        start = SpendTrackerSpacing.SectionGap,
+                        end = SpendTrackerSpacing.CompactGroupPadding,
+                        top = SpendTrackerSpacing.RelatedGap,
+                        bottom = SpendTrackerSpacing.RelatedGap,
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
                 verticalAlignment = Alignment.Top,
             ) {
                 Box(
@@ -233,14 +238,21 @@ private fun TransactionRow(
                         .padding(top = SpendTrackerSpacing.TightGap)
                         .size(width = 4.dp, height = 40.dp)
                         .clip(MaterialTheme.shapes.small)
-                        .background(transaction.category.color()),
+                        .background(SpendCategoryPalette.color(transaction.category)),
                 )
                 BoxWithConstraints(modifier = Modifier.weight(1f)) {
                     val stackAmount = maxWidth < 280.dp || LocalDensity.current.fontScale >= 1.3f
                     if (stackAmount) {
                         Column(verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.TightGap)) {
-                            TransactionIdentity(merchant, category, date, status)
-                            Text(amount, style = MaterialTheme.typography.titleSmall)
+                            TransactionIdentity(merchant, category, date)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(amount, style = MaterialTheme.typography.titleSmall)
+                                status?.let { TransactionStatus(it) }
+                            }
                         }
                     } else {
                         Row(
@@ -249,9 +261,15 @@ private fun TransactionRow(
                             verticalAlignment = Alignment.Top,
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
-                                TransactionIdentity(merchant, category, date, status)
+                                TransactionIdentity(merchant, category, date)
                             }
-                            Text(amount, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(amount, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                                status?.let {
+                                    Spacer(Modifier.height(SpendTrackerSpacing.TightGap))
+                                    TransactionStatus(it)
+                                }
+                            }
                         }
                     }
                 }
@@ -268,7 +286,6 @@ private fun TransactionIdentity(
     merchant: String,
     category: String,
     date: String,
-    status: String?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.TightGap)) {
         Text(
@@ -277,29 +294,24 @@ private fun TransactionIdentity(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.transaction_meta, category, date),
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            status?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    maxLines = 1,
-                )
-            }
-        }
+        Text(
+            stringResource(R.string.transaction_meta, category, date),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
+}
+
+@Composable
+private fun TransactionStatus(status: String) {
+    Text(
+        status,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.tertiary,
+        maxLines = 1,
+    )
 }
 
 private fun TransactionFilter.activeDimensionCount(): Int = listOf(
@@ -310,23 +322,6 @@ private fun TransactionFilter.activeDimensionCount(): Int = listOf(
     currency != null,
     foreignOnly,
 ).count { it }
-
-@Composable
-internal fun SpendCategory.color() = when (this) {
-    SpendCategory.FOOD_AND_DINING -> androidx.compose.ui.graphics.Color(0xFFE07A5F)
-    SpendCategory.GROCERIES -> androidx.compose.ui.graphics.Color(0xFF4F936B)
-    SpendCategory.TRANSPORT -> androidx.compose.ui.graphics.Color(0xFF4C78A8)
-    SpendCategory.SHOPPING -> androidx.compose.ui.graphics.Color(0xFF9C6ADE)
-    SpendCategory.BILLS_AND_UTILITIES -> androidx.compose.ui.graphics.Color(0xFFD19A3E)
-    SpendCategory.HOUSING -> androidx.compose.ui.graphics.Color(0xFF8B6F47)
-    SpendCategory.HEALTH -> androidx.compose.ui.graphics.Color(0xFFC95C75)
-    SpendCategory.ENTERTAINMENT -> androidx.compose.ui.graphics.Color(0xFF7A6FC2)
-    SpendCategory.TRAVEL -> androidx.compose.ui.graphics.Color(0xFF318C9C)
-    SpendCategory.EDUCATION -> androidx.compose.ui.graphics.Color(0xFF5E7D42)
-    SpendCategory.SUBSCRIPTIONS -> androidx.compose.ui.graphics.Color(0xFF6B7280)
-    SpendCategory.FEES_AND_CHARGES -> androidx.compose.ui.graphics.Color(0xFFB56A3B)
-    SpendCategory.OTHER -> MaterialTheme.colorScheme.outline
-}
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 720)
 @Preview(

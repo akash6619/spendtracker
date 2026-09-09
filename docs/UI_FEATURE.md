@@ -5,7 +5,7 @@
 - Backlog feature: UI enhancements and polish
 - Current state: Ready for implementation
 - Product scope: presentation and usability only
-- Implementation status: UI-00 through UI-02 complete; UI-03 ready
+- Implementation status: UI-00 through UI-03 complete; UI-04 ready
 
 This document shapes the first feature in `FEATURES.md` independently from the
 MVP release slices. Before implementation begins, the selected UI slice must be
@@ -18,8 +18,8 @@ added to `MVP_PLAN.md` and claimed in the `STATUS.md` active-work table.
 | UI-00 | Visual direction and reference baseline | Done | — | An approved compact visual language supported by representative screen concepts and design tokens | Preserve the approved decisions in UI-01 implementation and visual checks |
 | UI-01 | Compact design foundation | Done | UI-00 | Shared spacing, typography, width, container, and navigation patterns | Preserve the foundation while applying it to individual screens |
 | UI-02 | Dense transaction browsing and detail | Done | UI-01 | More ledger rows visible with clearer filtering, editing, and source access | Preserve behavior and row semantics while later slices evolve |
-| UI-03 | Compact dashboard hierarchy | Ready | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently | Apply the foundation and approved dashboard concept |
-| UI-04 | Onboarding and settings simplification | Planned | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling | Apply established components after the main financial screens stabilize |
+| UI-03 | Compact dashboard hierarchy | Done | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently | Preserve exact period and deep-link behavior in later work |
+| UI-04 | Onboarding and settings simplification | Ready | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling | Apply established components now that the main financial screens are stable |
 | UI-05 | Accessibility and visual release gate | Planned | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens | Run the complete viewport, theme, font-scale, TalkBack, and device matrix |
 
 ### Status legend
@@ -219,13 +219,13 @@ direction is explicitly accepted or revised.
 
 ### Acceptance criteria
 
-- [ ] Total, period, comparison, and exceptional counts are visible together
+- [x] Total, period, comparison, and exceptional counts are visible together
       near the top of the screen.
-- [ ] Category rows do not wrap at default font size on common phone widths.
-- [ ] Category, excluded, and foreign deep links remain accessible and retain
+- [x] Category rows do not wrap at default font size on common phone widths.
+- [x] Category, excluded, and foreign deep links remain accessible and retain
       their exact filters.
-- [ ] Empty-ledger and no-INR-spend states remain clearly different.
-- [ ] Daily bars retain meaningful TalkBack descriptions.
+- [x] Empty-ledger and no-INR-spend states remain clearly different.
+- [x] Daily bars retain meaningful TalkBack descriptions.
 
 ## UI-04 - Onboarding and settings simplification
 

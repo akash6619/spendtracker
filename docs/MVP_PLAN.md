@@ -30,6 +30,7 @@ slice begins.
 | ENH-01 | Historical day/week/month dashboard ranges | Complete | MVP-07 | Users can browse earlier calendar days, weeks, and months |
 | UI-01 | Compact design foundation | Complete | UI-00 | Shared compact tokens, responsive panes, reusable rows, and refined navigation |
 | UI-02 | Dense transaction browsing and detail | Complete | UI-01 | More ledger rows visible with clearer filtering, editing, and source access |
+| UI-03 | Compact dashboard hierarchy | Complete | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices

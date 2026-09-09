@@ -2,6 +2,7 @@ package com.spendtracker.app.ui.components
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -57,7 +58,9 @@ fun ContentPane(
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter,
     ) {
         Box(
@@ -327,7 +330,7 @@ private fun DesignFoundationPreview() {
                             )
                             GroupedRow(
                                 title = "Local transfer",
-                                metadata = "Excluded from spend · 7 Sep",
+                                metadata = "Excluded · 7 Sep",
                                 trailing = "₹240.00",
                                 showDivider = false,
                             )

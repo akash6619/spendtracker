@@ -48,6 +48,7 @@ import com.spendtracker.app.ui.format.formatMoney
 import com.spendtracker.app.ui.format.labelResource
 import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendCategoryPalette
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.SpendCategory
@@ -192,13 +193,19 @@ private fun DetailTopBar(
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
         )
-        Text(stringResource(R.string.field_inclusion), style = MaterialTheme.typography.labelMedium)
-        Switch(
-            checked = included,
-            onCheckedChange = onIncludedChanged,
-            enabled = enabled,
-            modifier = Modifier.testTag("inclusion_toggle"),
-        )
+        Row(
+            modifier = Modifier.padding(end = SpendTrackerSpacing.TightGap),
+            horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.field_inclusion), style = MaterialTheme.typography.labelMedium)
+            Switch(
+                checked = included,
+                onCheckedChange = onIncludedChanged,
+                enabled = enabled,
+                modifier = Modifier.testTag("inclusion_toggle"),
+            )
+        }
     }
 }
 
@@ -210,7 +217,7 @@ private fun TransactionSummary(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = category.color().copy(alpha = 0.12f),
+        color = SpendCategoryPalette.color(category).copy(alpha = 0.12f),
         contentColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.medium,
     ) {

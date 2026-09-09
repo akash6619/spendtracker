@@ -73,6 +73,10 @@
     <string name="category_share">%1$d%%</string>
     <string name="daily_spend_title">Daily spend</string>
     <string name="daily_bar_cd">%1$s: %2$s</string>
+    <string name="daily_chart_cd">Daily spend across %1$d days, totaling %2$s</string>
+    <string name="daily_spend_empty">No included INR spend to chart.</string>
+    <string name="dashboard_excluded_fact">%1$d excluded</string>
+    <string name="dashboard_foreign_fact">%1$d foreign</string>
     <string name="dashboard_empty_title">No recognized spend yet</string>
     <string name="dashboard_empty_body">Run a scan from Settings or use the debug demo to preview this screen.</string>
     <string name="dashboard_no_inr_title">No included INR spend in this period</string>
@@ -82,8 +86,8 @@
     <string name="transactions_subtitle">Recognized records stored privately on this device</string>
     <string name="transactions_empty_title">No transactions to show</string>
     <string name="transactions_empty_body">Scan financial SMS or open the debug demo to preview transaction rows.</string>
-    <string name="transaction_excluded">Excluded from spend</string>
-    <string name="transaction_foreign">Not included in INR total</string>
+    <string name="transaction_excluded">Excluded</string>
+    <string name="transaction_foreign">Foreign</string>
     <string name="transaction_unknown_merchant">Unknown merchant</string>
     <string name="transaction_meta">%1$s · %2$s</string>
 
@@ -149,7 +153,7 @@
     <string name="field_category">Category</string>
     <string name="field_inclusion">Spend</string>
     <string name="field_currency">Currency</string>
-    <string name="filter_included">Included in spend</string>
+    <string name="filter_included">Included</string>
     <string name="filters_active">Filters are active</string>
     <string name="active_filters_count">Filters · %1$d active</string>
     <string name="clear_filters">Clear filters</string>
@@ -188,7 +192,7 @@
     <string name="action_close">Close</string>
     <string name="source_ephemeral_note">The original message is shown only while this dialog is open. SpendTracker never stores message bodies.</string>
     <string name="foreign_explanation">Not included in INR totals: this transaction keeps its original currency and is not converted.</string>
-    <string name="included_by_default">Included in spend as a purchase or fee debit.</string>
+    <string name="included_by_default">Included as a purchase or fee debit.</string>
     <string name="excluded_conflict">Excluded because the message contains conflicting financial details.</string>
     <string name="excluded_by_kind">Excluded by default: credits, refunds, transfers, withdrawals, and unknown events are not ordinary spend.</string>
 </resources>

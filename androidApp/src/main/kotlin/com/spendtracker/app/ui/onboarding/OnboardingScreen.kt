@@ -59,6 +59,7 @@ fun OnboardingScreen(
         Text(
             stringResource(R.string.onboarding_title),
             style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             stringResource(R.string.onboarding_body),
