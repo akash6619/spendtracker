@@ -1,9 +1,9 @@
 # Current status
 
-- Last updated: 2026-09-09
+- Last updated: 2026-09-10
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
-- Next recommended work: UI-04 onboarding/settings simplification and
+- Next recommended work: UI-05 accessibility and visual release gate, then
   parser/classification refinement.
   Resume the open MVP-10 hardening and controlled-release gate after those
   enhancements stabilize.
@@ -68,6 +68,11 @@ Agents must claim work here before implementation and clear the row at handoff.
   exception facts. Category actions are dense divided rows, daily trends use a
   shorter accessible chart with an explicit zero state, and 720 dp layouts place
   category and trend panels side by side.
+- UI-04 onboarding/settings simplification: onboarding uses an inline privacy
+  disclosure, one primary permission action, a lower-emphasis demo action, and
+  one compact scan-progress block. Settings groups SMS access, label/value scan
+  status, spending/privacy rules, and destructive data controls; permission
+  recovery and confirmed deletion behavior remain unchanged.
 - Runtime `READ_SMS` permission request only after an explicit privacy disclosure
   and user action.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.

@@ -92,6 +92,9 @@
     <string name="transaction_meta">%1$s · %2$s</string>
 
     <string name="settings_title">Settings</string>
+    <string name="settings_access_section">SMS and scanning</string>
+    <string name="settings_rules_section">Spending and privacy</string>
+    <string name="settings_data_section">Data controls</string>
     <string name="settings_subtitle">Local data and SMS access</string>
     <string name="sms_access_title">SMS access</string>
     <string name="sms_access_granted">Granted</string>
@@ -100,6 +103,9 @@
     <string name="local_only_title">Local-only MVP</string>
     <string name="local_only_body">No account, backend, analytics, or internet permission is used. Parsed transactions are stored only on this device; SMS bodies are not saved.</string>
     <string name="status_title">Status</string>
+    <string name="status_last_scan_label">Last scan</string>
+    <string name="status_parser_label">Parser version</string>
+    <string name="status_stored_label">Stored transactions</string>
     <string name="status_never_scanned">No scan completed yet</string>
     <string name="status_last_scan">Last scan: %1$s</string>
     <string name="status_parser_version">Parser version: %1$d</string>
@@ -118,6 +124,7 @@
     <string name="delete_confirm_body">This permanently removes all locally stored transaction data. It cannot be undone.</string>
     <string name="action_confirm_delete">Delete everything</string>
     <string name="delete_failed">Data could not be deleted. Please try again.</string>
+    <string name="delete_failed_title">Delete failed</string>
     <string name="delete_succeeded">All SpendTracker data was deleted.</string>
     <string name="deleting">Deleting…</string>
     <string name="action_manage_sms">Manage SMS access</string>

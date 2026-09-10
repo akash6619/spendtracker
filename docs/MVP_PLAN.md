@@ -31,6 +31,8 @@ slice begins.
 | UI-01 | Compact design foundation | Complete | UI-00 | Shared compact tokens, responsive panes, reusable rows, and refined navigation |
 | UI-02 | Dense transaction browsing and detail | Complete | UI-01 | More ledger rows visible with clearer filtering, editing, and source access |
 | UI-03 | Compact dashboard hierarchy | Complete | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently |
+| UI-04 | Onboarding and settings simplification | Complete | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling |
+| UI-05 | Accessibility and visual release gate | Ready | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices

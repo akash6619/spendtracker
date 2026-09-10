@@ -5,7 +5,7 @@
 - Backlog feature: UI enhancements and polish
 - Current state: Ready for implementation
 - Product scope: presentation and usability only
-- Implementation status: UI-00 through UI-03 complete; UI-04 ready
+- Implementation status: UI-00 through UI-04 complete; UI-05 ready
 
 This document shapes the first feature in `FEATURES.md` independently from the
 MVP release slices. Before implementation begins, the selected UI slice must be
@@ -19,8 +19,8 @@ added to `MVP_PLAN.md` and claimed in the `STATUS.md` active-work table.
 | UI-01 | Compact design foundation | Done | UI-00 | Shared spacing, typography, width, container, and navigation patterns | Preserve the foundation while applying it to individual screens |
 | UI-02 | Dense transaction browsing and detail | Done | UI-01 | More ledger rows visible with clearer filtering, editing, and source access | Preserve behavior and row semantics while later slices evolve |
 | UI-03 | Compact dashboard hierarchy | Done | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently | Preserve exact period and deep-link behavior in later work |
-| UI-04 | Onboarding and settings simplification | Ready | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling | Apply established components now that the main financial screens are stable |
-| UI-05 | Accessibility and visual release gate | Planned | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens | Run the complete viewport, theme, font-scale, TalkBack, and device matrix |
+| UI-04 | Onboarding and settings simplification | Done | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling | Preserve recovery and lifecycle behavior during the release gate |
+| UI-05 | Accessibility and visual release gate | Ready | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens | Run the complete viewport, theme, font-scale, TalkBack, and device matrix |
 
 ### Status legend
 
@@ -250,12 +250,12 @@ direction is explicitly accepted or revised.
 
 ### Acceptance criteria
 
-- [ ] Access state and last-scan status are visible without scrolling on a
+- [x] Access state and last-scan status are visible without scrolling on a
       typical phone.
-- [ ] Denied, permanently denied, revoked, scanning, failed, and demo states
+- [x] Denied, permanently denied, revoked, scanning, failed, and demo states
       retain distinct recovery actions.
-- [ ] No privacy promise or data-lifecycle explanation is removed.
-- [ ] Delete-all still requires confirmation and cannot run during scanning or
+- [x] No privacy promise or data-lifecycle explanation is removed.
+- [x] Delete-all still requires confirmation and cannot run during scanning or
       another deletion.
 
 ## UI-05 - Accessibility and visual release gate
