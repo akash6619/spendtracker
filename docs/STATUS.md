@@ -1,9 +1,10 @@
 # Current status
 
-- Last updated: 2026-09-07
+- Last updated: 2026-09-10
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
-- Next recommended work: UI enhancement and parser/classification refinement.
+- Next recommended work: UI-05 accessibility and visual release gate, then
+  parser/classification refinement.
   Resume the open MVP-10 hardening and controlled-release gate after those
   enhancements stabilize.
 - Active work: none
@@ -50,6 +51,28 @@ Agents must claim work here before implementation and clear the row at handoff.
   cannot construct it.
 - Empty, loading, content, and error previews for primary screens.
 - Android strings/plurals resources and a minimal light/dark Material theme.
+- UI-01 compact design foundation: named spacing and responsive-width tokens,
+  an explicit compact typography/shape scale, centered 600/720 dp content
+  panes, optional compact page subtitles, labeled tonal bottom navigation, and
+  reusable section-heading, status-banner, and 48 dp grouped-row components.
+  Representative previews cover 320/360/412/840 dp widths, dark theme, and
+  150% font scale without changing navigation or screen-state contracts.
+- UI-02 dense ledger and detail: lazy divided 68 dp transaction rows show
+  merchant/amount, category/date, category markers, and explicit foreign or
+  excluded badges; amounts stack below metadata at narrow widths or 130%+
+  font scale. A compact filter toolbar reports active dimensions. Transaction
+  detail now has a compact top bar, category-tinted summary/editor, aligned fact
+  rows, prominent save action, and adjacent ephemeral-source explanation.
+- UI-03 compact dashboard hierarchy: period controls stay concise; one summary
+  surface combines range, total, count, comparison, navigation, and tappable
+  exception facts. Category actions are dense divided rows, daily trends use a
+  shorter accessible chart with an explicit zero state, and 720 dp layouts place
+  category and trend panels side by side.
+- UI-04 onboarding/settings simplification: onboarding uses an inline privacy
+  disclosure, one primary permission action, a lower-emphasis demo action, and
+  one compact scan-progress block. Settings groups SMS access, label/value scan
+  status, spending/privacy rules, and destructive data controls; permission
+  recovery and confirmed deletion behavior remain unchanged.
 - Runtime `READ_SMS` permission request only after an explicit privacy disclosure
   and user action.
 - `SmsInboxReader` streaming inbox rows from an explicit cutoff on IO.
@@ -339,6 +362,35 @@ periods compare with the full immediately preceding period. Dashboard fact links
 continue to open Transactions with the exact selected range. Shared/JVM and
 Android unit tests, Android UI-test compilation, lint, debug assembly, and the
 full connected suite passed on the API 37 `SpendTracker_API_37` emulator.
+
+On 2026-09-09, UI-01 applied the approved balanced-ledger foundation across the
+app shell. Primary screens are centered and width-constrained, destination
+headers omit redundant subtitles, outer spacing uses shared compact tokens, and
+bottom navigation retains visible labels and Material touch targets. New
+component tests verify the 720 dp wide-pane limit, optional subtitles, grouped
+row clicks, and the 48 dp minimum row target. The full shared/JVM and Android
+unit, lint, and debug-assembly gate passed. All 27 connected tests passed on the
+API 37 `SpendTracker_API_37` emulator. A fresh-install onboarding screen was
+visually inspected at the normal emulator viewport; the complete responsive,
+dark-theme, and font-scale visual matrix remains the UI-05 release gate.
+
+On 2026-09-09, UI-02 replaced individual ledger cards with lazy divided rows
+while preserving filter, edit, source lookup, and dashboard deep-link contracts.
+The normal API 37 viewport shows five synthetic rows above navigation; at 150%
+font scale four complete rows remain visible, with amounts stacked to prevent
+merchant collisions. Normal and 150% ledger/detail screens were visually
+checked with no clipped values, badges, toggles, or save action, and the emulator
+font scale was restored. The shared/JVM and Android unit, lint, debug assembly,
+and UI-test compilation gate passed. All 28 connected tests passed on the API 37
+`SpendTracker_API_37` emulator, including explicit foreign/excluded spoken-row
+descriptions and compact filter-state coverage.
+
+On 2026-09-09, UI-03 consolidated the dashboard hierarchy and kept all period
+navigation and exact-filter deep links intact. The populated month dashboard was
+visually checked on the API 37 emulator: total, comparison, exception facts,
+three category rows, and the daily chart fit above navigation at the normal
+viewport. Shared/JVM and Android unit tests, lint, debug assembly, Android UI
+test compilation, and all 28 connected tests passed.
 
 ## Known gaps
 

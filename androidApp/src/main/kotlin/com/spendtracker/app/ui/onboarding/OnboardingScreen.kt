@@ -15,7 +15,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,7 +25,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.spendtracker.app.R
 import com.spendtracker.app.ui.AppError
 import com.spendtracker.app.ui.AppStage
@@ -32,6 +33,7 @@ import com.spendtracker.app.ui.PermissionUiState
 import com.spendtracker.app.ui.UiTestTags
 import com.spendtracker.app.ui.components.InfoCard
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 
 @Composable
 fun OnboardingScreen(
@@ -47,8 +49,8 @@ fun OnboardingScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
+            .padding(SpendTrackerSpacing.PageMargin),
+        verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
     ) {
         Icon(
             imageVector = Icons.Outlined.Lock,
@@ -58,6 +60,7 @@ fun OnboardingScreen(
         Text(
             stringResource(R.string.onboarding_title),
             style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
             stringResource(R.string.onboarding_body),
@@ -65,10 +68,27 @@ fun OnboardingScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        InfoCard(
-            title = stringResource(R.string.onboarding_privacy_title),
-            body = stringResource(R.string.onboarding_privacy_body),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = SpendTrackerSpacing.RelatedGap),
+            horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(Icons.Outlined.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.TightGap)) {
+                Text(
+                    stringResource(R.string.onboarding_privacy_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    stringResource(R.string.onboarding_privacy_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
 
         if (state.error == AppError.SCAN_FAILED) {
             InfoCard(
@@ -154,26 +174,30 @@ fun OnboardingScreen(
         }
 
         if (state.isScanning) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = MaterialTheme.shapes.medium,
             ) {
-                CircularProgressIndicator()
-                Text(
-                    pluralStringResource(
-                        R.plurals.scan_progress_count,
-                        state.importProgress.scannedMessages,
-                        state.importProgress.scannedMessages,
-                    ),
-                )
-            }
-            OutlinedButton(
-                onClick = onCancelImport,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(UiTestTags.CANCEL_IMPORT),
-            ) {
-                Text(stringResource(R.string.action_cancel_import))
+                Row(
+                    modifier = Modifier.padding(SpendTrackerSpacing.CompactGroupPadding),
+                    horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.padding(SpendTrackerSpacing.TightGap))
+                    Text(
+                        pluralStringResource(
+                            R.plurals.scan_progress_count,
+                            state.importProgress.scannedMessages,
+                            state.importProgress.scannedMessages,
+                        ),
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = onCancelImport,
+                        modifier = Modifier.testTag(UiTestTags.CANCEL_IMPORT),
+                    ) { Text(stringResource(R.string.action_cancel_import)) }
+                }
             }
         }
 
@@ -190,7 +214,7 @@ fun OnboardingScreen(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
 private fun OnboardingPermissionPreview() {
     SpendTrackerTheme {

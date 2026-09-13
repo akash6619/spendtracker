@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -20,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.spendtracker.app.R
+import com.spendtracker.app.ui.components.ContentPane
 import com.spendtracker.app.ui.dashboard.DashboardActions
 import com.spendtracker.app.ui.dashboard.DashboardScreen
 import com.spendtracker.app.ui.onboarding.OnboardingScreen
@@ -29,6 +32,7 @@ import com.spendtracker.app.ui.settings.SettingsActions
 import com.spendtracker.app.ui.settings.SettingsScreen
 import com.spendtracker.app.ui.transactions.TransactionsScreen
 import com.spendtracker.app.ui.transactions.TransactionActions
+import com.spendtracker.app.ui.theme.SpendTrackerWidths
 
 /**
  * Stable semantic identifiers attached to important Compose controls.
@@ -115,14 +119,19 @@ fun SpendTrackerAppContent(
             CircularProgressIndicator()
         }
 
-        AppStage.ONBOARDING -> OnboardingScreen(
-            state = state,
-            onRequestPermission = onRequestSmsPermission,
-            onScanMessages = onScanMessages,
-            onCancelImport = onCancelImport,
-            onUseDemoData = onUseDemoData,
-            onOpenAppSettings = onOpenAppSettings,
-        )
+        AppStage.ONBOARDING -> ContentPane(
+            modifier = Modifier.fillMaxSize(),
+            maxWidth = SpendTrackerWidths.FocusedContent,
+        ) {
+            OnboardingScreen(
+                state = state,
+                onRequestPermission = onRequestSmsPermission,
+                onScanMessages = onScanMessages,
+                onCancelImport = onCancelImport,
+                onUseDemoData = onUseDemoData,
+                onOpenAppSettings = onOpenAppSettings,
+            )
+        }
 
         AppStage.MAIN -> MainAppScaffold(
             state = state,
@@ -144,7 +153,10 @@ private fun MainAppScaffold(
 ) {
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 0.dp,
+            ) {
                 TopLevelDestination.entries.forEach { destination ->
                     val navigationItem = destination.navigationItem()
                     val label = stringResource(navigationItem.labelResource)
@@ -158,30 +170,42 @@ private fun MainAppScaffold(
                             )
                         },
                         label = { Text(label) },
+                        alwaysShowLabel = true,
                         modifier = Modifier.testTag(navigationItem.testTag),
                     )
                 }
             }
         },
     ) { padding ->
-        when (state.selectedDestination) {
-            TopLevelDestination.DASHBOARD -> DashboardScreen(
-                state = state.dashboard,
-                modifier = Modifier.padding(padding),
-                actions = dashboardActions,
-            )
+        ContentPane(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+            maxWidth = if (
+                state.selectedDestination == TopLevelDestination.TRANSACTIONS &&
+                state.transactions.selected != null
+            ) {
+                SpendTrackerWidths.FocusedContent
+            } else {
+                SpendTrackerWidths.LedgerContent
+            },
+        ) {
+            when (state.selectedDestination) {
+                TopLevelDestination.DASHBOARD -> DashboardScreen(
+                    state = state.dashboard,
+                    actions = dashboardActions,
+                )
 
-            TopLevelDestination.TRANSACTIONS -> TransactionsScreen(
-                state = state.transactions,
-                modifier = Modifier.padding(padding),
-                actions = transactionActions,
-            )
+                TopLevelDestination.TRANSACTIONS -> TransactionsScreen(
+                    state = state.transactions,
+                    actions = transactionActions,
+                )
 
-            TopLevelDestination.SETTINGS -> SettingsScreen(
-                state = state,
-                actions = settingsActions,
-                modifier = Modifier.padding(padding),
-            )
+                TopLevelDestination.SETTINGS -> SettingsScreen(
+                    state = state,
+                    actions = settingsActions,
+                )
+            }
         }
     }
 }

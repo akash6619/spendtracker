@@ -42,9 +42,12 @@ class SettingsScreenTest {
                 )
             }
         }
-        compose.onNodeWithText("Status").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("12 transactions stored locally").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Parser version: 3").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("SMS access").assertIsDisplayed()
+        compose.onNodeWithText("Last scan").assertIsDisplayed()
+        compose.onNodeWithText("Stored transactions").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("12").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Parser version").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("3").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("What counts as spend").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Delete all SpendTracker data").performScrollTo().assertIsDisplayed()
     }

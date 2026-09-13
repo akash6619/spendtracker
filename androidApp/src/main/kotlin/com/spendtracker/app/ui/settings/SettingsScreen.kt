@@ -10,9 +10,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -30,9 +32,14 @@ import com.spendtracker.app.ui.SettingsUiState
 import com.spendtracker.app.ui.UiTestTags
 import com.spendtracker.app.ui.components.DemoBanner
 import com.spendtracker.app.ui.components.InfoCard
+import com.spendtracker.app.ui.components.GroupedRow
 import com.spendtracker.app.ui.components.ScreenHeader
+import com.spendtracker.app.ui.components.SectionHeading
+import com.spendtracker.app.ui.components.StatusBanner
+import com.spendtracker.app.ui.components.StatusTone
 import com.spendtracker.app.ui.format.formatDate
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
+import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 
 /**
  * Intents the settings/privacy screen emits to the ViewModel.
@@ -59,12 +66,11 @@ fun SettingsScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(SpendTrackerSpacing.PageMargin),
+        verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
     ) {
         ScreenHeader(
             title = stringResource(R.string.settings_title),
-            subtitle = stringResource(R.string.settings_subtitle),
         )
         if (state.usingDemoData) DemoBanner()
 
@@ -76,8 +82,10 @@ fun SettingsScreen(
             )
         }
 
+        SectionHeading(stringResource(R.string.settings_access_section))
         SmsAccessCard(state, actions)
         StatusCard(state)
+        SectionHeading(stringResource(R.string.settings_rules_section))
         InfoCard(
             title = stringResource(R.string.what_counts_title),
             body = stringResource(R.string.what_counts_body),
@@ -87,6 +95,7 @@ fun SettingsScreen(
             body = stringResource(R.string.local_only_body),
         )
         PrivacyCard(state)
+        SectionHeading(stringResource(R.string.settings_data_section))
         DeleteDataCard(state, actions)
 
         if (state.usingDemoData) {
@@ -113,21 +122,22 @@ fun SettingsScreen(
 
 @Composable
 private fun SmsAccessCard(state: AppUiState, actions: SettingsActions) {
-    InfoCard(
-        title = stringResource(R.string.sms_access_title),
-        body = stringResource(
-            if (state.permission == PermissionUiState.GRANTED) {
-                R.string.sms_access_granted
-            } else {
-                R.string.sms_access_required
-            },
-        ),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
     ) {
-        Text(
-            stringResource(R.string.import_window),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+      Column {
+        GroupedRow(
+            title = stringResource(R.string.sms_access_title),
+            trailing = stringResource(if (state.permission == PermissionUiState.GRANTED) R.string.sms_access_granted else R.string.sms_access_required),
+            metadata = stringResource(R.string.import_window),
+            showDivider = true,
         )
+        Column(
+            modifier = Modifier.padding(SpendTrackerSpacing.CompactGroupPadding),
+            verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
+        ) {
         when {
             state.isScanning -> {
                 Row(
@@ -139,9 +149,7 @@ private fun SmsAccessCard(state: AppUiState, actions: SettingsActions) {
                 }
                 OutlinedButton(
                     onClick = actions.onCancelImport,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(UiTestTags.CANCEL_IMPORT),
+                    modifier = Modifier.testTag(UiTestTags.CANCEL_IMPORT),
                 ) {
                     Text(stringResource(R.string.action_cancel_import))
                 }
@@ -155,9 +163,7 @@ private fun SmsAccessCard(state: AppUiState, actions: SettingsActions) {
                 )
                 OutlinedButton(
                     onClick = actions.onOpenAppSettings,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("manage_sms"),
+                    modifier = Modifier.testTag("manage_sms"),
                 ) {
                     Text(stringResource(R.string.action_manage_sms))
                 }
@@ -167,7 +173,6 @@ private fun SmsAccessCard(state: AppUiState, actions: SettingsActions) {
                 state.permission == PermissionUiState.DENIED -> Button(
                 onClick = actions.onRequestPermission,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .testTag(UiTestTags.ALLOW_SMS),
             ) {
                 Text(stringResource(R.string.action_allow_sms))
@@ -176,12 +181,13 @@ private fun SmsAccessCard(state: AppUiState, actions: SettingsActions) {
             else -> Button(
                 onClick = actions.onOpenAppSettings,
                 modifier = Modifier
-                    .fillMaxWidth()
                     .testTag(UiTestTags.OPEN_SETTINGS),
             ) {
                 Text(stringResource(R.string.action_open_settings))
             }
         }
+        }
+      }
     }
 }
 
@@ -189,21 +195,22 @@ private fun SmsAccessCard(state: AppUiState, actions: SettingsActions) {
 private fun StatusCard(state: AppUiState) {
     val settings = state.settings
     if (state.usingDemoData) return
-    InfoCard(
-        title = stringResource(R.string.status_title),
-        body = stringResource(
-            if (settings.lastScanEpochMillis == null) R.string.status_never_scanned else R.string.status_last_scan,
-            settings.lastScanEpochMillis?.let(::formatDate).orEmpty(),
-        ),
-    ) {
-        Text(stringResource(R.string.status_parser_version, settings.parserVersion))
-        Text(
-            androidx.compose.ui.res.pluralStringResource(
-                R.plurals.status_stored_count,
-                settings.storedTransactionCount,
-                settings.storedTransactionCount,
-            ),
-        )
+    Surface(Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.medium) {
+        Column {
+            GroupedRow(
+                title = stringResource(R.string.status_last_scan_label),
+                trailing = if (settings.lastScanEpochMillis == null) stringResource(R.string.status_never_scanned) else formatDate(settings.lastScanEpochMillis),
+            )
+            GroupedRow(
+                title = stringResource(R.string.status_parser_label),
+                trailing = settings.parserVersion.toString(),
+            )
+            GroupedRow(
+                title = stringResource(R.string.status_stored_label),
+                trailing = settings.storedTransactionCount.toString(),
+                showDivider = false,
+            )
+        }
     }
 }
 
@@ -229,7 +236,7 @@ private fun DeleteDataCard(state: AppUiState, actions: SettingsActions) {
         body = stringResource(R.string.data_lifecycle_body),
     ) {
         if (state.settings.deleteAllFailed) {
-            Text(stringResource(R.string.delete_failed), color = MaterialTheme.colorScheme.error)
+            StatusBanner(stringResource(R.string.delete_failed_title), stringResource(R.string.delete_failed), tone = StatusTone.ERROR)
         }
         if (state.settings.deleteAllSucceeded) {
             Text(stringResource(R.string.delete_succeeded), color = MaterialTheme.colorScheme.primary)
@@ -240,6 +247,10 @@ private fun DeleteDataCard(state: AppUiState, actions: SettingsActions) {
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("delete_all"),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError,
+            ),
         ) {
             if (state.settings.isDeletingAll) {
                 Text(stringResource(R.string.deleting))

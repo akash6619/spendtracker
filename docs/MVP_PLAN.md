@@ -28,6 +28,11 @@ slice begins.
 | MVP-09 | Privacy/settings and data lifecycle | Complete | MVP-06, MVP-08 | Users control access, data, and currency explanations |
 | MVP-10 | Hardening and controlled-release gate | Ready | MVP-01–MVP-09 | Accessible, performant, policy-ready MVP build |
 | ENH-01 | Historical day/week/month dashboard ranges | Complete | MVP-07 | Users can browse earlier calendar days, weeks, and months |
+| UI-01 | Compact design foundation | Complete | UI-00 | Shared compact tokens, responsive panes, reusable rows, and refined navigation |
+| UI-02 | Dense transaction browsing and detail | Complete | UI-01 | More ledger rows visible with clearer filtering, editing, and source access |
+| UI-03 | Compact dashboard hierarchy | Complete | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently |
+| UI-04 | Onboarding and settings simplification | Complete | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling |
+| UI-05 | Accessibility and visual release gate | Ready | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens |
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices
@@ -526,6 +531,90 @@ the current week or month.
 - [x] Compose tests cover Day selection and previous/next control state.
 - [x] Shared/JVM, Android unit, lint, debug assembly, and the API 37 connected
       test suite pass.
+
+---
+
+## UI-01 — Compact design foundation
+
+**Status:** Complete
+**Depends on:** UI-00 visual direction and reference baseline
+
+### Goal
+
+Establish the approved balanced-ledger design language as shared Compose tokens
+and components without changing navigation behavior or UI-state contracts.
+
+### Deliverables
+
+- Named spacing, width, shape, and typography tokens based on UI-00.
+- Reusable content-pane, compact section-heading, status/banner, and grouped-row
+  components.
+- Compact page headers with optional subtitles and centered maximum content
+  widths on primary screens.
+- Refined labeled bottom navigation with standard touch targets.
+- Representative narrow, normal, wide, light/dark, and increased-font previews.
+
+### Acceptance criteria
+
+- [x] Primary content does not stretch indefinitely on a wide viewport.
+- [x] New layout spacing comes from shared tokens rather than scattered large
+      literals.
+- [x] Interactive controls retain at least 48 dp targets.
+- [x] Page title, section title, body, metadata, warning, and destructive
+      treatments are visually distinct.
+- [x] Navigation behavior and UI-state contracts remain unchanged.
+
+### Test gate
+
+- [x] Compose coverage verifies pane width, optional page subtitles, grouped-row
+      interaction, and top-level navigation.
+- [x] Shared/JVM and Android unit tests, lint, debug assembly, and Android UI-test
+      compilation pass.
+- [x] Connected Compose tests and representative visual checks pass when an
+      emulator or device is available.
+
+---
+
+## UI-02 — Dense transaction browsing and detail
+
+**Status:** Complete
+**Depends on:** UI-01 compact design foundation
+
+### Goal
+
+Make the ledger and transaction editor faster to scan and operate while
+preserving filtering, editing, source lookup, and dashboard deep-link behavior.
+
+### Deliverables
+
+- Replace separate transaction cards with a divided grouped ledger surface and
+  compact 64-72 dp rows that expand safely for status or large text.
+- Keep merchant and amount prominent, with category/date metadata and explicit
+  foreign or excluded text badges included in row semantics.
+- Replace the filter block with a compact toolbar showing filter state and a
+  clear action only when filters are active.
+- Add a compact detail top bar, summary region, aligned metadata rows, grouped
+  editing controls, prominent save action, and adjacent source privacy note.
+
+### Acceptance criteria
+
+- [x] At least four typical transaction rows are visible above bottom navigation
+      on a normal phone viewport.
+- [x] Merchant and amount do not collide at common widths.
+- [x] Large text expands rows without clipping amounts, statuses, filters, or
+      save actions.
+- [x] Foreign and excluded status remains visible and announced.
+- [x] Filtering, editing, source lookup, and dashboard deep links retain their
+      current behavior.
+
+### Test gate
+
+- [x] Compose tests cover compact row count/layout, merged status semantics,
+      filter state, detail editing, and source access.
+- [x] Shared/JVM and Android unit tests, lint, debug assembly, and Android UI-test
+      compilation pass.
+- [x] Connected Compose tests and normal/large-font visual checks pass when an
+      emulator or device is available.
 
 ---
 

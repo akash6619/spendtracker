@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -50,11 +51,15 @@ class DashboardScreenTest {
         // Six included INR rows; p8 review row is an included purchase.
         compose.onNodeWithText("₹3127.00").assertIsDisplayed()
         compose.onNodeWithText("6 included transactions").assertIsDisplayed()
-        compose.onNodeWithText("1 foreign-currency transaction is outside this total").assertIsDisplayed()
+        compose.onNodeWithText("1 foreign").assertIsDisplayed()
+        compose.onNodeWithText("1 excluded").assertIsDisplayed()
         compose.onNodeWithTag("link_foreign").assertIsDisplayed()
         compose.onNodeWithTag("link_excluded").assertIsDisplayed()
         compose.onNodeWithTag("category_row_FOOD_AND_DINING").assertIsDisplayed()
+        compose.onNodeWithTag("daily_chart").assertIsDisplayed()
         compose.onAllNodes(hasTagPrefix("daily_bar_")).assertCountEquals(7)
+        compose.onNodeWithTag("daily_bar_0").performClick()
+        compose.onNodeWithTag("daily_bar_popup").assertIsDisplayed()
     }
 
     @Test
@@ -85,6 +90,7 @@ class DashboardScreenTest {
             }
         }
 
+        compose.onNodeWithTag("period_menu").performClick()
         compose.onNodeWithTag("period_month").performClick()
         compose.onNodeWithText("This month").assertIsDisplayed()
         assertEquals(listOf(DashboardPeriod.MONTH), requested)
@@ -118,11 +124,14 @@ class DashboardScreenTest {
             }
         }
 
+        compose.onNodeWithTag("period_menu").performClick()
         compose.onNodeWithTag("period_day").performClick()
         compose.onNodeWithText("Today").assertIsDisplayed()
         compose.onNodeWithTag("period_next").assertIsNotEnabled()
+        compose.onNodeWithContentDescription("Show previous day").assertIsDisplayed()
         compose.onNodeWithTag("period_previous").performClick()
         compose.onNodeWithText("Selected day").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Show next day").assertIsDisplayed()
         compose.onNodeWithTag("period_next").assertIsEnabled().performClick()
         compose.onNodeWithTag("period_next").assertIsNotEnabled()
 
@@ -167,7 +176,7 @@ class DashboardScreenTest {
         }
 
         compose.onNodeWithText("No recognized spend yet").assertIsDisplayed()
-        compose.onNodeWithTag("period_week").assertIsDisplayed()
+        compose.onNodeWithTag("period_menu").assertIsDisplayed()
     }
 
     @Test
@@ -195,6 +204,7 @@ class DashboardScreenTest {
         }
 
         compose.onNodeWithText("No included INR spend in this period").assertIsDisplayed()
+        compose.onNodeWithText("No included INR spend to chart.").assertIsDisplayed()
     }
 
     private fun weekState(): DashboardUiState {
