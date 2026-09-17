@@ -39,13 +39,16 @@ class RoomTransactionRepositoryTest {
         firstRepository.upsert(listOf(candidate("7", "same")))
         firstRepository.upsert(listOf(candidate("7", "same")))
         val id = firstRepository.observeTransactions().first().single().id
-        firstRepository.updateTransaction(id, SpendCategory.TRAVEL, false)
+        firstRepository.updateTransaction(id, "Harbor Books", TransactionKind.TRANSFER, TransactionDirection.CREDIT, SpendCategory.TRAVEL, false)
         assertEquals(1, firstRepository.observeTransactions().first().size)
         firstDatabase.close()
 
         val reopened = createSpendTrackerDatabase(file)
         assertEquals(1, reopened.transactionDao().count())
         assertEquals("TRAVEL", reopened.transactionDao().findById(id)?.category)
+        assertEquals("Harbor Books", reopened.transactionDao().findById(id)?.merchant)
+        assertEquals("TRANSFER", reopened.transactionDao().findById(id)?.kind)
+        assertEquals("CREDIT", reopened.transactionDao().findById(id)?.direction)
         assertEquals(false, reopened.transactionDao().findById(id)?.includedInSpend)
         reopened.close()
         file.delete()
@@ -93,7 +96,7 @@ class RoomTransactionRepositoryTest {
         withRepository { repository, _ ->
             repository.upsert(listOf(candidate("1", "stable")))
             val original = repository.observeTransactions().first().single()
-            repository.updateTransaction(original.id, SpendCategory.TRAVEL, false)
+            repository.updateTransaction(original.id, original.merchant, original.kind, original.direction, SpendCategory.TRAVEL, false)
             repository.upsert(listOf(candidate("2", "stable", amountMinor = 999)))
 
             // User-edited rows are frozen: the re-import cannot touch them.
@@ -120,7 +123,7 @@ class RoomTransactionRepositoryTest {
 
             val updated = repository.observeTransactions().first().single()
             assertEquals(999, updated.money.amountMinor)
-            assertEquals(3, updated.parserVersion)
+            assertEquals(parser.version, updated.parserVersion)
             assertFalse(updated.userEdited)
         }
     }
@@ -205,7 +208,7 @@ class RoomTransactionRepositoryTest {
                 candidate("3", "low", timestamp = 3_000, confidence = .2),
             ))
             val food = repository.observeTransactions().first().first { it.sourceFingerprint == "food" }
-            repository.updateTransaction(food.id, SpendCategory.TRAVEL, true)
+            repository.updateTransaction(food.id, food.merchant, food.kind, food.direction, SpendCategory.TRAVEL, true)
 
             assertEquals(2, database.transactionDao().inPeriod(900, 2_000).size)
             assertEquals(250, database.transactionDao().periodTotal(900, 2_000).totalMinor)
@@ -231,7 +234,7 @@ class RoomTransactionRepositoryTest {
             ))
             var rows = repository.observeTransactions().first()
             rows.filter { it.money.currency == CurrencyCode.JPY }.forEach {
-                repository.updateTransaction(it.id, SpendCategory.TRAVEL, false)
+                repository.updateTransaction(it.id, it.merchant, it.kind, it.direction, SpendCategory.TRAVEL, false)
             }
             rows = repository.observeTransactions().first()
             val filter = TransactionFilter(
@@ -271,7 +274,7 @@ class RoomTransactionRepositoryTest {
             ))
             val categoryOnly = repository.observeTransactions().first()
                 .first { it.sourceFingerprint == "category-only" }
-            repository.updateTransaction(categoryOnly.id, SpendCategory.SHOPPING, true)
+            repository.updateTransaction(categoryOnly.id, categoryOnly.merchant, categoryOnly.kind, categoryOnly.direction, SpendCategory.SHOPPING, true)
             val resolved = repository.getById(categoryOnly.id)!!
             assertFalse(resolved.needsReview)
             assertEquals(0.90, resolved.confidence)
@@ -279,7 +282,7 @@ class RoomTransactionRepositoryTest {
 
             val conflict = repository.observeTransactions().first()
                 .first { it.sourceFingerprint == "conflict" }
-            repository.updateTransaction(conflict.id, SpendCategory.SHOPPING, true)
+            repository.updateTransaction(conflict.id, conflict.merchant, TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.SHOPPING, true)
             val stillConflict = repository.getById(conflict.id)!!
             assertTrue(stillConflict.needsReview)
             assertTrue(TransactionReviewReason.CONFLICTING_AMOUNTS in stillConflict.reviewReasons)

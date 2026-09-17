@@ -38,11 +38,14 @@ interface TransactionDao {
     @Query("UPDATE transactions SET sourceProviderId = NULL, updatedAtEpochMillis = :updatedAt WHERE id = :id")
     suspend fun clearProviderId(id: String, updatedAt: Long)
 
-    // A user edit stores the chosen values and freezes the row against import
-    // refreshes; an explicit category resolves only the category review concern.
+    // A user edit stores the chosen merchant, type, direction, category, and
+    // inclusion values and freezes the row against later import refreshes.
     @Query("""
         UPDATE transactions
-        SET category = :category,
+        SET merchant = :merchant,
+            kind = :kind,
+            direction = :direction,
+            category = :category,
             includedInSpend = :included,
             reviewReasons = :reviewReasons,
             confidence = :confidence,
@@ -52,6 +55,9 @@ interface TransactionDao {
     """)
     suspend fun updateTransaction(
         id: String,
+        merchant: String?,
+        kind: String,
+        direction: String,
         category: String,
         included: Boolean,
         reviewReasons: String,

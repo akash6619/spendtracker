@@ -5,6 +5,8 @@ import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.SourceMessage
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
+import com.spendtracker.core.model.TransactionDirection
+import com.spendtracker.core.model.TransactionKind
 import com.spendtracker.core.parser.FinancialMessageParser
 import com.spendtracker.core.parser.RejectionReason
 import com.spendtracker.core.repository.ImportStateRepository
@@ -42,7 +44,7 @@ class ImportCoordinatorTest {
         assertEquals(184, result.progress.savedTransactions)
         assertTrue(result.initialImportComplete)
         assertEquals(ImportRunStatus.COMPLETED, result.status)
-        assertEquals(3, result.parserVersion)
+        assertEquals(FinancialMessageParser().version, result.parserVersion)
         assertTrue(transactions.maxBatchSize <= 25)
         assertEquals(result.progress, progressUpdates.last())
     }
@@ -210,7 +212,14 @@ private class RecordingTransactionRepository : TransactionRepository {
         fingerprints += transactions.map { it.sourceFingerprint }
     }
     override suspend fun getById(id: String): LedgerTransaction? = null
-    override suspend fun updateTransaction(id: String, category: SpendCategory, includedInSpend: Boolean) = Unit
+    override suspend fun updateTransaction(
+        id: String,
+        merchant: String?,
+        kind: TransactionKind,
+        direction: TransactionDirection,
+        category: SpendCategory,
+        includedInSpend: Boolean,
+    ) = Unit
     override fun observeMerchantRules(): Flow<List<MerchantCategoryRule>> = MutableStateFlow(emptyList())
     override suspend fun saveMerchantRule(merchant: String, category: SpendCategory) = Unit
     override suspend fun deleteMerchantRule(merchant: String) = Unit

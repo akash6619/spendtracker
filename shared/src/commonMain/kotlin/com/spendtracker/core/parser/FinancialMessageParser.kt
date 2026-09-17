@@ -22,8 +22,9 @@ import com.spendtracker.core.model.TransactionReviewReason
  * [ParseOutcome.Rejected] with a privacy-safe reason.
  *
  * Rules are conservative and versioned. When detected behavior changes, [version]
- * advances; repository re-import semantics then update detected values while
- * preserving explicit user category and inclusion overrides.
+ * advances; re-import refreshes untouched rows and preserves user-edited rows.
+ * Explicit balance/limit amounts are contextual metadata, while unlabelled
+ * competing amounts stay ambiguous. No source text leaves the parsing call.
  */
 class FinancialMessageParser(
     private val merchantNormalizer: MerchantNormalizer = MerchantNormalizer(),
@@ -93,11 +94,13 @@ class FinancialMessageParser(
     }
 
     private fun extractMoney(text: String): AmountResult {
-        val matches = AMOUNT_TOKEN.findAll(text).toList()
-        if (matches.isEmpty()) {
+        val tokens = AMOUNT_TOKEN.findAll(text).toList()
+        if (tokens.isEmpty()) {
             return if (CURRENCY_SIGNAL.containsMatchIn(text)) AmountResult.Failure(RejectionReason.MALFORMED_AMOUNT)
             else AmountResult.Failure(RejectionReason.MISSING_AMOUNT)
         }
+        val matches = tokens.filterNot { isContextAmount(text, it) }
+        if (matches.isEmpty()) return AmountResult.Failure(RejectionReason.MISSING_AMOUNT)
         val parsed = matches.map { match ->
             val currency = currency(match.groupValues[1])
                 ?: return AmountResult.Failure(RejectionReason.UNSUPPORTED_CURRENCY)
@@ -111,6 +114,18 @@ class FinancialMessageParser(
             Money(minor, currency)
         }
         return AmountResult.Success(parsed.first(), parsed.distinct().size > 1)
+    }
+
+    private fun isContextAmount(text: String, amount: MatchResult): Boolean {
+        // Only an adjacent, explicit label can remove an amount from consideration.
+        // In particular, "paid for outstanding balance" is still a payment.
+        val before = text.substring((amount.range.first - 100).coerceAtLeast(0), amount.range.first)
+        if (!CONTEXT_AMOUNT_LABEL.containsMatchIn(before)) return false
+        val afterStart = amount.range.last + 1
+        val after = text.substring(afterStart, (afterStart + 60).coerceAtMost(text.length))
+        // A completed verb directly attached to the value outweighs its prefix:
+        // "Available balance INR 500 debited" describes money actually moved.
+        return !AMOUNT_EVENT_SUFFIX.containsMatchIn(after)
     }
 
     private fun currency(token: String): CurrencyCode? = when (token.uppercase()) {
@@ -198,14 +213,22 @@ class FinancialMessageParser(
     private data class DirectionResult(val direction: TransactionDirection, val conflicting: Boolean)
 
     private companion object {
-        const val PARSER_BASE_VERSION = 2
+        const val PARSER_BASE_VERSION = 3
         const val MAX_MERCHANT_LENGTH = 80
 
         val AMOUNT_TOKEN = Regex("(?i)(?<![A-Z0-9])(INR|Rs\\.?|₹|USD|\\$|EUR|€|GBP|£|JPY|¥|AUD|CAD)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)")
         val NUMBER_FORMAT = Regex("(?:[0-9]+|[0-9]{1,3}(?:,[0-9]{2})*,[0-9]{3}|[0-9]{1,3}(?:,[0-9]{3})+)(?:\\.[0-9]+)?")
         val CURRENCY_SIGNAL = Regex("(?i)(?:₹|\\$|€|£|¥|\\b(?:INR|RS\\.?|USD|EUR|GBP|JPY|AUD|CAD)\\b)")
+        val CONTEXT_AMOUNT_LABEL = Regex(
+            """(?i)\b(?:(?:available|avail|avl|current|closing|remaining|ledger|clear|account)\.?\s+(?:balance|bal)\.?|(?:(?:available|avl|total)\.?\s+)?credit\s+limit|available\s+limit)\s*(?:(?:is|of)\s*)?[:=]?\s*$""",
+        )
+        val AMOUNT_EVENT_SUFFIX = Regex(
+            """(?i)^\s*(?:(?:was|is|has\s+been)\s+)?(?:debited|credited|spent|paid|withdrawn|charged|received|refunded|reversed|transferred)\b""",
+        )
         val ACCOUNT_HINT = Regex("(?i)(?:a/?c|account|card)(?:\\s+(?:no\\.?|number|ending|xx|x))*[\\s:*#-]*[xX*.-]*([0-9]{3,6})")
-        val MERCHANT = Regex("(?i)(?:\\bat\\b|\\bto\\b|\\bon\\b|info:)\\s+(?!\\d|your\\b|my\\b|the\\b|this\\b)([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\\s+(?:on|using|via|ref|avl|available|from|for|was)\\b|[.;]|$)")
+        val MERCHANT = Regex(
+            """(?i)(?:\bat\b|\bto\b|\bon\b|info:)\s+(?!\d|your\b|my\b|the\b|this\b|(?:credit\s+|debit\s+)?card\b|account\b|a/?c\b)([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\s+(?:on|using|via|ref|reference|avl|avail|available|current|closing|account|credit\s+limit|from|for|was)\b|[.,;]|$)""",
+        )
         val OTP_OR_AUTHORIZATION = Regex("(?i)\\b(?:otp|one[ -]time password|verification code|do not share|authorization only|pre-?authori[sz](?:ation|ed)|pending transaction)\\b")
         val FAILED_OR_CANCELLED = Regex("(?i)\\b(?:declined|failed|unsuccessful|not processed|cancelled|canceled|rejected)\\b")
         val BALANCE_ONLY = Regex("(?i)\\b(?:available|avl|current|closing)\\s+(?:balance|bal)\\b|\\bbalance enquiry\\b")

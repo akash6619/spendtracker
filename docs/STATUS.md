@@ -1,13 +1,13 @@
 # Current status
 
-- Last updated: 2026-09-10
+- Last updated: 2026-09-17
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
 - Next recommended work: UI-05 accessibility and visual release gate, then
   parser/classification refinement.
   Resume the open MVP-10 hardening and controlled-release gate after those
   enhancements stabilize.
-- Active work: none
+- Active work: none.
 
 ## Active work
 
@@ -17,6 +17,32 @@ Agents must claim work here before implementation and clear the row at handoff.
 | --- | --- | --- | --- | --- |
 
 ## Implemented now
+
+- ENH-02 keeps the merchant read-only in the normal transaction summary with an
+  accessible pencil icon that explicitly enters fact-edit mode for merchant,
+  transaction type, and direction. Merchant edits in the summary while Type and
+  Direction toggle in their existing Details rows. The check icon or keyboard
+  Done commits all three; category and spend inclusion still persist immediately
+  without a page-level Save button. Each update writes the full editor state,
+  marks the row user-edited, refreshes list/dashboard facts, and a newer
+  interaction supersedes an in-flight update (D-023).
+
+- Parser research documented in [PARSER_RESEARCH.md](PARSER_RESEARCH.md): field
+  priorities, contextual rules, existing/custom ML, local/hosted LLMs, and Google
+  Gemini Nano, with costs, constraints, sources, and a sequential experiment log.
+  Documentation task complete; no experiments or production changes yet. Next
+  parser step is PAR-00 (safe labelled corpus and measured baseline), ready to
+  claim when parser work resumes; existing UI work remains separately active.
+
+- PAR-01A completed the first deterministic parser refinement. The parser now
+  distinguishes explicitly labelled balance/limit values from transaction
+  amounts, keeps unknown competing amounts ambiguous, skips card/account text as
+  merchants, and stops merchant spans at additional metadata boundaries. Parser
+  output version is 4. The focused synthetic corpus improved from 15/90 to 90/90
+  complete payment evaluations while retaining 54/54 negative/ambiguity safety
+  outcomes; these figures are regression coverage, not a real-inbox estimate.
+  Shared/JVM and Android unit tests, lint, debug assembly, and iOS simulator
+  shared compilation passed. Next parser work is the broader PAR-00 baseline.
 
 - Two Gradle modules: `androidApp` and `shared`.
 - KMP targets for Android, JVM host tests, iOS device, and iOS simulator.
@@ -62,7 +88,8 @@ Agents must claim work here before implementation and clear the row at handoff.
   excluded badges; amounts stack below metadata at narrow widths or 130%+
   font scale. A compact filter toolbar reports active dimensions. Transaction
   detail now has a compact top bar, category-tinted summary/editor, aligned fact
-  rows, prominent save action, and adjacent ephemeral-source explanation.
+  rows, immediate merchant/category/inclusion editing, and adjacent ephemeral-source
+  explanation.
 - UI-03 compact dashboard hierarchy: period controls stay concise; one summary
   surface combines range, total, count, comparison, navigation, and tappable
   exception facts. Category actions are dense divided rows, daily trends use a
@@ -131,7 +158,7 @@ Agents must claim work here before implementation and clear the row at handoff.
   the UI (list, detail, dashboard, filter) until a full-transaction edit can
   close all concerned fields; the data-layer reasons and rule remain intact.
   The reset-to-defaults action is gone; detail editors start from effective
-  (detected) values and every save stores the chosen values.
+  (detected) values and each committed edit stores the chosen values.
 - Single-value model (D-019): Room schema version 4 drops the detected/user
   override split, category keeps one value, inclusion is a non-null boolean
   shown as a detail toggle at top right; version 5 adds `userEdited`. Imports
@@ -392,6 +419,22 @@ three category rows, and the daily chart fit above navigation at the normal
 viewport. Shared/JVM and Android unit tests, lint, debug assembly, Android UI
 test compilation, and all 28 connected tests passed.
 
+On 2026-09-14, ENH-02 added durable merchant editing and immediate category and
+spend-inclusion updates without an explicit Save button. After rebasing onto the
+latest compact UI, shared/JVM and Android unit tests, lint, debug assembly, and
+all connected tests passed on the API 37 `SpendTracker_API_37` emulator. The
+updated Compose test covers merchant editing, immediate category/inclusion
+updates, and the absence of the Save button.
+
+On 2026-09-17, ENH-02 restored the merchant's read-only summary presentation and
+placed an accessible edit icon beside it. The icon reveals merchant, Type, and
+Direction controls, with Type and Direction staying in their existing Details
+section rows. The check icon or keyboard Done commits them together, and Back
+cancels the active draft before leaving detail. Explicit Type and Direction
+choices resolve their matching review concerns while unrelated amount ambiguity
+survives. The full shared/JVM, Android unit, lint, debug assembly, and connected
+suite passed on `SpendTracker_API_37`.
+
 ## Known gaps
 
 - Top-level destination survives configuration changes through the ViewModel but
@@ -420,6 +463,10 @@ a decision:
 2. Final Google Play declaration/distribution path for SMS permission approval.
 3. Widening merchant detection beyond `at`/`to`/`on`/`info:` anchors and its
    effect on category quality.
+4. Parser experiments: reference phone/Nano availability, priority template and
+   language coverage, and baseline-derived promotion targets remain unresolved;
+   see [PARSER_RESEARCH.md](PARSER_RESEARCH.md). Stored-time, reconciliation, and
+   model-adoption policy changes are not implied by the research roadmap.
 
 ## Handoff update checklist
 

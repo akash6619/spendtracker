@@ -25,7 +25,7 @@ class FinancialMessageParserTest {
 
     @Test
     fun parserVersionIncludesCategorizationPolicyVersion() {
-        assertEquals(2 + TransactionCategorizer().version, parser.version)
+        assertEquals(3 + TransactionCategorizer().version, parser.version)
     }
 
     @Test
@@ -47,7 +47,7 @@ class FinancialMessageParserTest {
             assertTrue(parsed != null, case.body)
             assertEquals(case.kind, parsed.kind, case.body)
             assertEquals(case.included, parsed.includedInSpend, case.body)
-            assertEquals(3, parsed.parserVersion)
+            assertEquals(4, parsed.parserVersion)
         }
     }
 

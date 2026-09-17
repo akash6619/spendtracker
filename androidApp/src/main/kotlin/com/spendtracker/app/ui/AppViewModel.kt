@@ -19,6 +19,8 @@ import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionFilter
+import com.spendtracker.core.model.TransactionDirection
+import com.spendtracker.core.model.TransactionKind
 import com.spendtracker.core.model.filteredBy
 import com.spendtracker.core.repository.ImportStateRepository
 import com.spendtracker.core.repository.TransactionRepository
@@ -218,9 +220,17 @@ class AppViewModel(
 
     fun onRetryTransactions() = observe(activeRepository)
 
-    fun onSaveTransaction(category: SpendCategory, included: Boolean) {
+    fun onUpdateTransaction(
+        merchant: String?,
+        kind: TransactionKind,
+        direction: TransactionDirection,
+        category: SpendCategory,
+        included: Boolean,
+    ) {
         val selected = _uiState.value.transactions.selected ?: return
-        if (_uiState.value.transactions.isSaving) return
+        // A newer control change contains the complete editor state and supersedes
+        // any write still in flight from the preceding tap or focus change.
+        editJob?.cancel()
         val repository = activeRepository
         _uiState.update { it.copy(transactions = it.transactions.copy(
             isSaving = true, saveFailed = false, saveSucceeded = false,
@@ -228,7 +238,7 @@ class AppViewModel(
         editJob = viewModelScope.launch {
             try {
                 checkNotNull(repository.getById(selected.id))
-                repository.updateTransaction(selected.id, category, included)
+                repository.updateTransaction(selected.id, merchant, kind, direction, category, included)
                 // Read back before acknowledging the save; repository observation may lag.
                 val saved = checkNotNull(repository.getById(selected.id))
                 onTransactionsChanged(ledger.map { if (it.id == saved.id) saved else it })

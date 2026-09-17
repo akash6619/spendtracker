@@ -7,6 +7,8 @@ import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.ReviewPolicy
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
+import com.spendtracker.core.model.TransactionDirection
+import com.spendtracker.core.model.TransactionKind
 import com.spendtracker.core.model.TransactionReviewReason
 import com.spendtracker.core.repository.TransactionRepository
 import kotlinx.coroutines.flow.Flow
@@ -60,14 +62,28 @@ class InMemoryTransactionRepository(
     override suspend fun getById(id: String): LedgerTransaction? =
         transactions.value.firstOrNull { it.id == id }
 
-    override suspend fun updateTransaction(id: String, category: SpendCategory, includedInSpend: Boolean) {
+    override suspend fun updateTransaction(
+        id: String,
+        merchant: String?,
+        kind: TransactionKind,
+        direction: TransactionDirection,
+        category: SpendCategory,
+        includedInSpend: Boolean,
+    ) {
         transactions.update { rows ->
             rows.map { row ->
                 if (row.id != id) return@map row
-                // An explicit category resolves only the category concern; other
-                // stored reasons stay untouched and confidence follows the set.
-                val resolvedReasons = row.reviewReasons - TransactionReviewReason.UNKNOWN_CATEGORY
+                // Explicit type, direction, and category choices resolve their
+                // concerns while unrelated ambiguity remains visible.
+                val resolvedReasons = row.reviewReasons - setOf(
+                    TransactionReviewReason.UNKNOWN_CATEGORY,
+                    TransactionReviewReason.CONFLICTING_DIRECTIONS,
+                    TransactionReviewReason.UNKNOWN_KIND,
+                )
                 row.copy(
+                    merchant = merchant?.trim()?.takeIf(String::isNotEmpty),
+                    kind = kind,
+                    direction = direction,
                     category = category,
                     includedInSpend = includedInSpend,
                     reviewReasons = resolvedReasons,

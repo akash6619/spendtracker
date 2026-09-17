@@ -58,6 +58,9 @@ class RoomTransactionRepository(
 
     override suspend fun updateTransaction(
         id: String,
+        merchant: String?,
+        kind: TransactionKind,
+        direction: TransactionDirection,
         category: SpendCategory,
         includedInSpend: Boolean,
     ) {
@@ -66,11 +69,18 @@ class RoomTransactionRepository(
             ?.split(',')
             ?.mapTo(linkedSetOf(), TransactionReviewReason::valueOf)
             ?: emptySet()
-        // An explicit category resolves only the category concern; other stored
-        // reasons stay untouched, and confidence follows the surviving set.
-        val resolvedReasons = storedReasons - TransactionReviewReason.UNKNOWN_CATEGORY
+        // Explicit type, direction, and category choices resolve their concerns;
+        // unrelated amount ambiguity survives and controls the confidence value.
+        val resolvedReasons = storedReasons - setOf(
+            TransactionReviewReason.UNKNOWN_CATEGORY,
+            TransactionReviewReason.CONFLICTING_DIRECTIONS,
+            TransactionReviewReason.UNKNOWN_KIND,
+        )
         dao.updateTransaction(
             id = id,
+            merchant = merchant?.trim()?.takeIf(String::isNotEmpty),
+            kind = kind.name,
+            direction = direction.name,
             category = category.name,
             included = includedInSpend,
             reviewReasons = resolvedReasons.sorted().joinToString(","),

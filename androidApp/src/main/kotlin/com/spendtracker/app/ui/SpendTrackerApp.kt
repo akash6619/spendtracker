@@ -71,7 +71,7 @@ fun SpendTrackerApp(
             filter = viewModel::onTransactionFilterChanged,
             open = viewModel::onTransactionSelected,
             close = viewModel::onTransactionClosed,
-            save = viewModel::onSaveTransaction,
+            update = viewModel::onUpdateTransaction,
             retry = viewModel::onRetryTransactions,
             viewSource = viewModel::onViewSourceMessage,
             dismissSource = viewModel::onDismissSourceMessage,

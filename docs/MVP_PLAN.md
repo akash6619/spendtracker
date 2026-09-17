@@ -33,6 +33,46 @@ slice begins.
 | UI-03 | Compact dashboard hierarchy | Complete | UI-01 | Spending totals, comparisons, exceptions, categories, and trends scan efficiently |
 | UI-04 | Onboarding and settings simplification | Complete | UI-01 | Permission, privacy, status, and data controls have clear hierarchy with less scrolling |
 | UI-05 | Accessibility and visual release gate | Ready | UI-02, UI-03, UI-04 | Responsive, accessible, visually verified primary screens |
+| PAR-01A | Amount roles and merchant boundaries | Complete | MVP-04, MVP-05 | Balance/limit amounts no longer obscure clear payments; merchant extraction skips instrument descriptions |
+| ENH-02 | Immediate transaction detail editing | Complete | MVP-06 | Users can edit merchants, categories, and spend inclusion without a separate save tap |
+
+## PAR-01A — First deterministic parser refinement
+
+**Status:** Complete
+
+This user-assigned first pass combines a focused synthetic baseline with fixes
+for its amount-role and merchant-boundary failures. It is a pilot for PAR-00 and
+PAR-01 in [PARSER_RESEARCH.md](PARSER_RESEARCH.md), not completion of their broader
+multi-bank evaluation. No private source data or external-app export is required.
+
+### Acceptance criteria
+
+- [x] Labelled synthetic positives, negatives, and ambiguity cases report a
+      reproducible before/after baseline without claiming real-inbox accuracy.
+- [x] Explicit balance/limit amounts before or after a payment are excluded from
+      transaction candidates; unknown additional amounts remain conflicting.
+- [x] An amount used to pay a bill, fee, or outstanding balance is not discarded
+      merely because its sentence contains those words.
+- [x] Merchant extraction skips card/account descriptions and stops at common
+      metadata boundaries; missing merchants remain optional.
+- [x] Malformed/unsupported transaction amounts, failed/pending/OTP messages,
+      genuine multi-amount ambiguity, exact currencies, and spend policy retain
+      conservative handling.
+- [x] Parser version advances; existing user-edit and dedupe regressions pass.
+
+### Test gate
+
+- [x] Run new corpus against the original parser and record failure counts.
+- [x] Shared JVM and Android unit tests pass after fixes.
+- [x] Android lint and debug assembly pass; shared iOS compilation checks portability.
+- [x] No UI, Room, SMS adapter, permission, or background-work changes; connected
+      testing is not required for this shared-only slice.
+
+### Deferred
+
+Issuer-specific routing, semantic direction/status rewrites, category expansion,
+ML, new stored fields, source export, and private-device inspection remain outside
+this first slice. Record bank/template priorities when the user supplies them.
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices

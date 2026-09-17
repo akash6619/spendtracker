@@ -158,6 +158,9 @@
     <string name="filter_to">Through date (YYYY-MM-DD)</string>
     <string name="filter_invalid_date">Enter valid dates with the end on or after the start.</string>
     <string name="field_category">Category</string>
+    <string name="field_merchant">Merchant</string>
+    <string name="action_edit_merchant">Edit merchant, type, and direction</string>
+    <string name="action_confirm_merchant">Confirm merchant, type, and direction</string>
     <string name="field_inclusion">Spend</string>
     <string name="field_currency">Currency</string>
     <string name="filter_included">Included</string>
@@ -170,7 +173,6 @@
     <string name="action_retry">Retry</string>
     <string name="action_apply">Apply filters</string>
     <string name="action_cancel">Cancel</string>
-    <string name="action_save">Save changes</string>
     <string name="action_saving">Saving…</string>
     <string name="action_back_transactions">Back to transactions</string>
     <string name="transaction_detail_title">Transaction details</string>

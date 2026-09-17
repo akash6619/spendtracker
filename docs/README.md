@@ -16,6 +16,8 @@ and handoff work.
 | Document | Purpose |
 | --- | --- |
 | [`PRODUCT.md`](PRODUCT.md) | Goals, user journeys, scope, and product requirements |
+| [`FEATURES.md`](FEATURES.md) | Prioritized enhancement ideas and shaping checklists |
+| [`PARSER_RESEARCH.md`](PARSER_RESEARCH.md) | Parser fields, rules/ML/LLM/Nano options, and sequential experiment roadmap |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Framework choice, module boundaries, and data flow |
 | [`LOW_LEVEL_DESIGN.md`](LOW_LEVEL_DESIGN.md) | Beginner-friendly runtime, class, state, persistence, and sequence design |
 | [`DATA_AND_PRIVACY.md`](DATA_AND_PRIVACY.md) | Storage model, raw-SMS policy, retention, and currency |

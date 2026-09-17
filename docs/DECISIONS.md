@@ -332,3 +332,23 @@ entry that records the reason, migration impact, and affected tests.
   Changing granularity resets the offset to zero. Dashboard-to-Transactions links
   carry the exact selected half-open range. This changes reporting navigation,
   not the three-calendar-month initial SMS import or data-retention policy.
+
+## D-023 — Immediate transaction-detail updates
+
+- Date: 2026-09-14
+- Status: Accepted and validated
+- Decision: Merchant, category, and spend inclusion are editable transaction
+  facts. Category and inclusion persist on selection. Merchant stays read-only
+  in the normal summary until its pencil icon is selected. Merchant edits in the
+  summary while Type and Direction become controls in their existing Details
+  rows; all three persist together through the check icon or IME Done. Back
+  cancels the active draft. Explicit type and direction choices clear their
+  corresponding review concerns. The editor has no page-level Save button, and
+  each update submits the complete current editor state. A newer interaction
+  supersedes an older update still in flight.
+- Reason: Editing should take one fewer explicit action while remaining clear
+  about when free-form merchant text is committed.
+- Consequence: Every committed edit sets `userEdited`, so later import refreshes
+  cannot overwrite the corrected merchant or other chosen values. Empty or
+  whitespace-only merchant text is stored as a missing merchant. No schema or
+  privacy-boundary change is required.

@@ -62,13 +62,14 @@ class AppViewModelTest {
         val id = vm.uiState.value.transactions.transactions.single().id
         vm.onTransactionFilterChanged(TransactionFilter(category = SpendCategory.FOOD_AND_DINING, included = true))
         vm.onTransactionSelected(id)
-        vm.onSaveTransaction(SpendCategory.TRAVEL, false)
+        vm.onUpdateTransaction("Harbor Books", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.TRAVEL, false)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.transactions.transactions.isEmpty())
         assertEquals(SpendCategory.TRAVEL, vm.uiState.value.transactions.selected?.category)
+        assertEquals("Harbor Books", vm.uiState.value.transactions.selected?.merchant)
         assertEquals(0, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
         assertTrue(vm.uiState.value.transactions.saveSucceeded)
-        vm.onSaveTransaction(SpendCategory.FOOD_AND_DINING, true)
+        vm.onUpdateTransaction("Harbor Books", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.FOOD_AND_DINING, true)
         advanceUntilIdle()
         assertEquals(1, vm.uiState.value.transactions.transactions.size)
         assertEquals(685_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
@@ -81,20 +82,27 @@ class AppViewModelTest {
         val backing = InMemoryTransactionRepository(listOf(transaction("edit")))
         var fail = true
         val repository = object : TransactionRepository by backing {
-            override suspend fun updateTransaction(id: String, category: SpendCategory, includedInSpend: Boolean) {
+            override suspend fun updateTransaction(
+                id: String,
+                merchant: String?,
+                kind: TransactionKind,
+                direction: TransactionDirection,
+                category: SpendCategory,
+                includedInSpend: Boolean,
+            ) {
                 if (fail) error("synthetic failure")
-                backing.updateTransaction(id, category, includedInSpend)
+                backing.updateTransaction(id, merchant, kind, direction, category, includedInSpend)
             }
         }
         val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, false)
         advanceUntilIdle()
         vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
-        vm.onSaveTransaction(SpendCategory.TRAVEL, false)
+        vm.onUpdateTransaction("Northstar Cafe", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.TRAVEL, false)
         advanceUntilIdle()
         assertTrue(vm.uiState.value.transactions.saveFailed)
         assertEquals(685_00, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
         fail = false
-        vm.onSaveTransaction(SpendCategory.TRAVEL, false)
+        vm.onUpdateTransaction("Northstar Cafe", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.TRAVEL, false)
         advanceUntilIdle()
         assertFalse(vm.uiState.value.transactions.saveFailed)
         assertEquals(0, vm.uiState.value.dashboard.report?.includedInrTotalMinor)
@@ -600,7 +608,7 @@ class AppViewModelTest {
         assertTrue(row.needsReview)
 
         vm.onTransactionSelected(row.id)
-        vm.onSaveTransaction(SpendCategory.SHOPPING, true)
+        vm.onUpdateTransaction(row.merchant, row.kind, row.direction, SpendCategory.SHOPPING, true)
         advanceUntilIdle()
 
         val saved = vm.uiState.value.transactions.selected!!
@@ -626,7 +634,7 @@ class AppViewModelTest {
         )
         advanceUntilIdle()
         vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
-        vm.onSaveTransaction(SpendCategory.SHOPPING, true)
+        vm.onUpdateTransaction("Northstar Cafe", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.SHOPPING, true)
         advanceUntilIdle()
 
         val saved = vm.uiState.value.transactions.selected!!
@@ -652,11 +660,11 @@ class AppViewModelTest {
         )
         advanceUntilIdle()
         vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
-        vm.onSaveTransaction(SpendCategory.SHOPPING, true)
+        vm.onUpdateTransaction("Northstar Cafe", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.SHOPPING, true)
         advanceUntilIdle()
         assertFalse(vm.uiState.value.transactions.selected!!.needsReview)
 
-        vm.onSaveTransaction(SpendCategory.GROCERIES, false)
+        vm.onUpdateTransaction("Northstar Cafe", TransactionKind.PURCHASE, TransactionDirection.DEBIT, SpendCategory.GROCERIES, false)
         advanceUntilIdle()
         val saved = vm.uiState.value.transactions.selected!!
         assertFalse(saved.needsReview)

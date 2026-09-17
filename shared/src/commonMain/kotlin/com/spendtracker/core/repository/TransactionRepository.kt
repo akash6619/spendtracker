@@ -4,6 +4,8 @@ import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.SpendCategory
 import com.spendtracker.core.model.TransactionCandidate
+import com.spendtracker.core.model.TransactionDirection
+import com.spendtracker.core.model.TransactionKind
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -22,6 +24,9 @@ interface TransactionRepository {
 
     suspend fun updateTransaction(
         id: String,
+        merchant: String?,
+        kind: TransactionKind,
+        direction: TransactionDirection,
         category: SpendCategory,
         includedInSpend: Boolean,
     )

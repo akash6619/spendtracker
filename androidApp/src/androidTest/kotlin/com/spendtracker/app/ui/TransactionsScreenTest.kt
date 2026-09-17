@@ -39,7 +39,7 @@ class TransactionsScreenTest {
     }
 
     @Test
-    fun detailSavesCategoryAndInclusionStartingFromDetectedValues() {
+    fun pencilEditsMerchantTypeAndDirectionWithoutSaveButton() {
         compose.setContent {
             var row by remember { mutableStateOf(PreviewData.transaction) }
             var selected by remember { mutableStateOf(false) }
@@ -48,22 +48,43 @@ class TransactionsScreenTest {
                     TransactionsUiState(transactions = listOf(row), selected = row.takeIf { selected }),
                     actions = TransactionActions(
                         open = { selected = true }, close = { selected = false },
-                        save = { category, included -> row = row.copy(category = category, includedInSpend = included) },
+                        update = { merchant, kind, direction, category, included ->
+                            row = row.copy(
+                                merchant = merchant,
+                                kind = kind,
+                                direction = direction,
+                                category = category,
+                                includedInSpend = included,
+                            )
+                        },
                     ),
                 )
             }
         }
         compose.onNodeWithText(PreviewData.transaction.merchant!!).performClick()
-        // Category editor shows the stored value; inclusion is a toggle at top right.
+        // Merchant stays read-only until its explicit edit affordance is used.
+        compose.onNodeWithTag("merchant_field").assertDoesNotExist()
+        compose.onNodeWithTag("edit_merchant").assertIsDisplayed().performClick()
+        compose.onNodeWithTag("merchant_field").assertTextContains(PreviewData.transaction.merchant!!)
+        compose.onNodeWithTag("merchant_field").performTextReplacement("Harbor Books")
+        compose.onNodeWithText("Type: purchase").performScrollTo().performClick()
+        compose.onNodeWithText("transfer").performClick()
+        compose.onNodeWithText("Direction: debit").performScrollTo().performClick()
+        compose.onNodeWithText("credit").performClick()
+        compose.onNodeWithTag("confirm_merchant_edit").performScrollTo().performClick()
+        compose.onNodeWithTag("merchant_field").assertDoesNotExist()
+        compose.onNodeWithText("transfer").assertIsDisplayed()
+        compose.onNodeWithText("credit").assertIsDisplayed()
         compose.onNodeWithText("Category: Food & dining").assertIsDisplayed()
         compose.onNodeWithTag("inclusion_toggle").assertIsDisplayed()
         compose.onNodeWithText("Category: Food & dining").performScrollTo().performClick()
         compose.onNodeWithText("Travel").performScrollTo().performClick()
         compose.onNodeWithTag("inclusion_toggle").performScrollTo().performClick()
-        compose.onNodeWithText("Save changes").performScrollTo().performClick()
+        compose.onNodeWithText("Save changes").assertDoesNotExist()
         compose.onNodeWithText("Excluded").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("detail_back").performClick()
         compose.onNodeWithText("Filters").assertIsDisplayed()
+        compose.onNodeWithText("Harbor Books").assertIsDisplayed()
     }
 
     @Test

@@ -18,13 +18,15 @@ import java.time.ZoneId
 /**
  * Intents emitted by the ledger and editor to the application ViewModel.
  * Default callbacks keep previews independent of Android services. UI never
- * reads storage directly; null edit values explicitly reset detected defaults.
+ * reads storage directly; detail edits are sent immediately without a separate
+ * save action.
  */
 data class TransactionActions(
     val filter: (TransactionFilter) -> Unit = {},
     val open: (String) -> Unit = {},
     val close: () -> Unit = {},
-    val save: (SpendCategory, Boolean) -> Unit = { _, _ -> },
+    val update: (String?, TransactionKind, TransactionDirection, SpendCategory, Boolean) -> Unit =
+        { _, _, _, _, _ -> },
     val retry: () -> Unit = {},
     val viewSource: () -> Unit = {},
     val dismissSource: () -> Unit = {},
