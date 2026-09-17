@@ -39,7 +39,7 @@ class MerchantNormalizer {
  * deterministic fallback. User-approved rules are applied later by the repository.
  */
 class TransactionCategorizer {
-    val version: Int = 1
+    val version: Int = 2
 
     fun categorize(kind: TransactionKind, normalizedMerchant: String?): SpendCategory {
         if (kind == TransactionKind.FEE) return SpendCategory.FEES_AND_CHARGES
@@ -50,17 +50,20 @@ class TransactionCategorizer {
 
     private companion object {
         val RULES = listOf(
-            Regex("\\b(?:SWIGGY|ZOMATO|RESTAURANT|CAFE|COFFEE|DINING)\\b") to SpendCategory.FOOD_AND_DINING,
-            Regex("\\b(?:BIGBASKET|BLINKIT|ZEPTO|GROCERY|GROCERIES|SUPERMARKET)\\b") to SpendCategory.GROCERIES,
-            Regex("\\b(?:UBER|OLA|METRO|FUEL|PETROL|DIESEL|RAPIDO)\\b") to SpendCategory.TRANSPORT,
-            Regex("\\b(?:AMAZON|FLIPKART|MYNTRA|SHOPPING|RETAIL)\\b") to SpendCategory.SHOPPING,
-            Regex("\\b(?:ELECTRICITY|BROADBAND|RECHARGE|UTILITY|MOBILE BILL|WATER BILL)\\b") to SpendCategory.BILLS_AND_UTILITIES,
-            Regex("\\b(?:RENT|HOUSING|MAINTENANCE)\\b") to SpendCategory.HOUSING,
-            Regex("\\b(?:HOSPITAL|PHARMACY|MEDICAL|MEDICINE|CLINIC)\\b") to SpendCategory.HEALTH,
-            Regex("\\b(?:CINEMA|MOVIE|GAMING|BOOKMYSHOW)\\b") to SpendCategory.ENTERTAINMENT,
-            Regex("\\b(?:HOTEL|FLIGHT|AIRLINE|MAKEMYTRIP|GOIBIBO|TRAVEL)\\b") to SpendCategory.TRAVEL,
-            Regex("\\b(?:SCHOOL|COLLEGE|COURSE|TUITION|EDUCATION)\\b") to SpendCategory.EDUCATION,
-            Regex("\\b(?:NETFLIX|SPOTIFY|HOTSTAR|SUBSCRIPTION)\\b") to SpendCategory.SUBSCRIPTIONS,
+            // Concatenated provider descriptors are common in bank SMS values;
+            // Instamart must precede the general Swiggy food identity.
+            Regex("INSTAMART") to SpendCategory.GROCERIES,
+            Regex("SWIGGY|ZOMATO|RESTAURANT|CAFE|COFFEE|DINING") to SpendCategory.FOOD_AND_DINING,
+            Regex("BIGBASKET|BLINKIT|ZEPTO|GROCERY|GROCERIES|SUPERMARKET") to SpendCategory.GROCERIES,
+            Regex("UBER|OLA|METRO|FUEL|PETROL|DIESEL|RAPIDO") to SpendCategory.TRANSPORT,
+            Regex("AMAZON|FLIPKART|MYNTRA|SHOPPING|RETAIL") to SpendCategory.SHOPPING,
+            Regex("ELECTRICITY|BROADBAND|RECHARGE|UTILITY|MOBILE BILL|WATER BILL") to SpendCategory.BILLS_AND_UTILITIES,
+            Regex("RENT|HOUSING|MAINTENANCE") to SpendCategory.HOUSING,
+            Regex("HOSPITAL|PHARMACY|MEDICAL|MEDICINE|CLINIC") to SpendCategory.HEALTH,
+            Regex("CINEMA|MOVIE|GAMING|BOOKMYSHOW") to SpendCategory.ENTERTAINMENT,
+            Regex("HOTEL|FLIGHT|AIRLINE|MAKEMYTRIP|GOIBIBO|TRAVEL") to SpendCategory.TRAVEL,
+            Regex("SCHOOL|COLLEGE|COURSE|TUITION|EDUCATION") to SpendCategory.EDUCATION,
+            Regex("NETFLIX|SPOTIFY|HOTSTAR|SUBSCRIPTION") to SpendCategory.SUBSCRIPTIONS,
         )
     }
 }

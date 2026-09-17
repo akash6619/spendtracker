@@ -18,6 +18,22 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 ## Implemented now
 
+- PAR-01C changes built-in merchant categorization from whole-word matching to
+  substring matching across every keyword. `INSTAMART` is an independent first
+  rule, so any merchant containing it maps to Groceries before a containing
+  `SWIGGY` can map to Food & Dining; embedded identities such as
+  `XYZZOMATOXYZ` now categorize as Food & Dining. Categorization version is 2
+  and parser output version is 6. Shared/JVM and Android unit tests, Android
+  lint, and debug assembly pass.
+
+- PAR-01B refines merchant identity handling for two observed deterministic
+  failures. Extraction now evaluates successive merchant anchors, treats `at`
+  as a boundary, and skips card/account descriptions so a later store name is
+  selected. Ordered category rules recognize concatenated Swiggy identities,
+  with `SWIGGYINSTAMART...` classified as Groceries before the general
+  `SWIGGY...` Food & Dining fallback. Parser output version is 5. Shared/JVM and
+  Android unit tests, Android lint, and debug assembly pass.
+
 - ENH-02 keeps the merchant read-only in the normal transaction summary with an
   accessible pencil icon that explicitly enters fact-edit mode for merchant,
   transaction type, and direction. Merchant edits in the summary while Type and

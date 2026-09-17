@@ -57,6 +57,26 @@ class TransactionCategorizerTest {
     }
 
     @Test
+    fun categorizesEmbeddedMerchantKeywordsWithInstamartPrecedence() {
+        assertEquals(
+            SpendCategory.GROCERIES,
+            categorizer.categorize(TransactionKind.PURCHASE, normalizer.normalize("XYZINSTAMARTGR")),
+        )
+        assertEquals(
+            SpendCategory.GROCERIES,
+            categorizer.categorize(TransactionKind.PURCHASE, normalizer.normalize("SWIGGYINSTAMARTGR")),
+        )
+        assertEquals(
+            SpendCategory.FOOD_AND_DINING,
+            categorizer.categorize(TransactionKind.PURCHASE, normalizer.normalize("SWIGGYPVTLTDFOOD1")),
+        )
+        assertEquals(
+            SpendCategory.FOOD_AND_DINING,
+            categorizer.categorize(TransactionKind.PURCHASE, normalizer.normalize("XYZZOMATOXYZ")),
+        )
+    }
+
+    @Test
     fun otherPurchaseIsReviewableWithoutBeingExcludedForCategoryUncertainty() {
         val outcome = assertIs<ParseOutcome.NeedsReview>(
             FinancialMessageParser().classify(

@@ -25,7 +25,7 @@ class FinancialMessageParserTest {
 
     @Test
     fun parserVersionIncludesCategorizationPolicyVersion() {
-        assertEquals(3 + TransactionCategorizer().version, parser.version)
+        assertEquals(4 + TransactionCategorizer().version, parser.version)
     }
 
     @Test
@@ -47,7 +47,7 @@ class FinancialMessageParserTest {
             assertTrue(parsed != null, case.body)
             assertEquals(case.kind, parsed.kind, case.body)
             assertEquals(case.included, parsed.includedInSpend, case.body)
-            assertEquals(4, parsed.parserVersion)
+            assertEquals(6, parsed.parserVersion)
         }
     }
 
@@ -141,6 +141,15 @@ class FinancialMessageParserTest {
             message("INR 500 debited on your card at NORTHSTAR"),
         ).transactionOrNull()
         assertEquals("NORTHSTAR", possessive?.merchant)
+    }
+
+    @Test
+    fun skipsBankCardDescriptionAndUsesLaterMerchantAnchor() {
+        val parsed = parser.classify(
+            message("INR 500 spent on HDFC Bank card 1234 at Ratnadeep Retail Pvt."),
+        ).transactionOrNull()
+
+        assertEquals("RATNADEEP RETAIL", parsed?.merchant)
     }
 
     @Test

@@ -175,8 +175,16 @@ class FinancialMessageParser(
     }
 
     private fun extractMerchant(text: String): String? {
-        val merchant = MERCHANT.find(text)?.groups?.get(1)?.value ?: return null
-        return merchant.trim(' ', '.', ',', '-').takeIf { it.length >= 2 }?.take(MAX_MERCHANT_LENGTH)
+        return MERCHANT.findAll(text)
+            .mapNotNull { match ->
+                match.groups[1]?.value
+                    ?.trim(' ', '.', ',', '-')
+                    ?.takeIf { it.length >= 2 }
+                    ?.take(MAX_MERCHANT_LENGTH)
+            }
+            // An earlier "on <card>" phrase describes the payment instrument,
+            // so keep looking for a later merchant anchor such as "at <store>".
+            .firstOrNull { !PAYMENT_INSTRUMENT_MERCHANT.containsMatchIn(it) }
     }
 
     private fun confidence(reasons: Set<TransactionReviewReason>): Double = when {
@@ -213,7 +221,7 @@ class FinancialMessageParser(
     private data class DirectionResult(val direction: TransactionDirection, val conflicting: Boolean)
 
     private companion object {
-        const val PARSER_BASE_VERSION = 3
+        const val PARSER_BASE_VERSION = 4
         const val MAX_MERCHANT_LENGTH = 80
 
         val AMOUNT_TOKEN = Regex("(?i)(?<![A-Z0-9])(INR|Rs\\.?|₹|USD|\\$|EUR|€|GBP|£|JPY|¥|AUD|CAD)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)")
@@ -227,7 +235,10 @@ class FinancialMessageParser(
         )
         val ACCOUNT_HINT = Regex("(?i)(?:a/?c|account|card)(?:\\s+(?:no\\.?|number|ending|xx|x))*[\\s:*#-]*[xX*.-]*([0-9]{3,6})")
         val MERCHANT = Regex(
-            """(?i)(?:\bat\b|\bto\b|\bon\b|info:)\s+(?!\d|your\b|my\b|the\b|this\b|(?:credit\s+|debit\s+)?card\b|account\b|a/?c\b)([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\s+(?:on|using|via|ref|reference|avl|avail|available|current|closing|account|credit\s+limit|from|for|was)\b|[.,;]|$)""",
+            """(?i)(?:\bat\b|\bto\b|\bon\b|info:)\s+(?!\d|your\b|my\b|the\b|this\b|(?:credit\s+|debit\s+)?card\b|account\b|a/?c\b)([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\s+(?:at|on|using|via|ref|reference|avl|avail|available|current|closing|account|credit\s+limit|from|for|was)\b|[.,;]|$)""",
+        )
+        val PAYMENT_INSTRUMENT_MERCHANT = Regex(
+            """(?i)\b(?:(?:credit|debit|bank)\s+)?card\b|\b(?:account|a/?c)\b""",
         )
         val OTP_OR_AUTHORIZATION = Regex("(?i)\\b(?:otp|one[ -]time password|verification code|do not share|authorization only|pre-?authori[sz](?:ation|ed)|pending transaction)\\b")
         val FAILED_OR_CANCELLED = Regex("(?i)\\b(?:declined|failed|unsuccessful|not processed|cancelled|canceled|rejected)\\b")
