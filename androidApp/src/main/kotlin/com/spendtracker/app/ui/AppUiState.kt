@@ -81,10 +81,10 @@ data class DashboardUiState(
 )
 
 /**
- * Ephemeral state for the on-demand original-message view.
- * [Found] holds the raw body only while the dialog is open; the ViewModel clears
- * it on dismiss, on selection change, and when the detail closes. The body is
- * never persisted and never logged.
+ * Ephemeral state for the original message shown with transaction detail.
+ * [Found] holds the raw body only while that detail is open; the ViewModel clears
+ * it on selection change and when the detail closes. The body is never added to
+ * the transaction, persisted, cached, or logged.
  */
 sealed interface SourceViewUiState {
     data object Loading : SourceViewUiState

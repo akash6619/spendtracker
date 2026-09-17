@@ -28,8 +28,6 @@ data class TransactionActions(
     val update: (String?, TransactionKind, TransactionDirection, SpendCategory, Boolean) -> Unit =
         { _, _, _, _, _ -> },
     val retry: () -> Unit = {},
-    val viewSource: () -> Unit = {},
-    val dismissSource: () -> Unit = {},
 )
 
 @Composable

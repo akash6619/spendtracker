@@ -38,8 +38,9 @@ For an Android SMS-backed transaction, persist:
   and message content using an installation-local secret;
 - parsed transaction fields only.
 
-The provider row ID allows an explicit `View source message` action to query the
-system SMS provider later and display the body ephemerally (implemented, D-017).
+The provider row ID allows the transaction-detail view to query the system SMS
+provider when that view opens and display the body ephemerally (implemented,
+D-017 and D-024).
 The fetched row must reproduce the stored installation-local fingerprint before
 anything is shown, because Android can reuse provider row IDs after deletions.
 It is not a guarantee:

@@ -117,8 +117,7 @@ class TransactionsScreenTest {
     }
 
     @Test
-    fun sourceViewShowsFoundBodyEphemerallyAndDismisses() {
-        var dismissed = 0
+    fun sourceViewShowsFoundBodyInline() {
         val source = mutableStateOf<SourceViewUiState?>(
             SourceViewUiState.Found("SYNTHETIC SENDER", "SYNTHETIC MESSAGE BODY", 1_788_457_600_000),
         )
@@ -130,20 +129,15 @@ class TransactionsScreenTest {
                         selected = PreviewData.transaction,
                         sourceView = source.value,
                     ),
-                    actions = TransactionActions(dismissSource = { source.value = null; dismissed += 1 }),
                 )
             }
         }
-        compose.onNodeWithTag("source_message_body").assertIsDisplayed()
+        compose.onNodeWithTag("source_message_body").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("SYNTHETIC MESSAGE BODY").assertIsDisplayed()
-        compose.onNodeWithText("Close").performClick()
-        compose.onNodeWithText("SYNTHETIC MESSAGE BODY").assertDoesNotExist()
-        assertEquals(1, dismissed)
     }
 
     @Test
-    fun sourceViewExplainsUnavailableMessageAndViewSourceButtonEmitsIntent() {
-        var viewed = 0
+    fun sourceViewExplainsUnavailableMessageInline() {
         val source = mutableStateOf<SourceViewUiState?>(null)
         compose.setContent {
             SpendTrackerTheme {
@@ -153,22 +147,15 @@ class TransactionsScreenTest {
                         selected = PreviewData.transaction,
                         sourceView = source.value,
                     ),
-                    actions = TransactionActions(
-                        viewSource = { viewed += 1 },
-                        dismissSource = { source.value = null },
-                    ),
                 )
             }
         }
-        compose.onNodeWithTag("view_source_message").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("view_source_message").performClick()
-        assertEquals(1, viewed)
 
         compose.runOnIdle {
             source.value = SourceViewUiState.Unavailable(
                 com.spendtracker.app.data.SourceUnavailableReason.MESSAGE_NOT_FOUND,
             )
         }
-        compose.onNodeWithText("The original message is no longer available on this device. It may have been deleted or replaced.").assertIsDisplayed()
+        compose.onNodeWithText("The original message is no longer available on this device. It may have been deleted or replaced.").performScrollTo().assertIsDisplayed()
     }
 }

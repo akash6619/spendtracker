@@ -505,7 +505,7 @@ class AppViewModelTest {
     }
 
     @Test
-    fun sourceViewShowsFoundMessageAndClearsOnDismiss() = runTest {
+    fun openingDetailLoadsSourceMessageByIdAndClosingClearsIt() = runTest {
         val lookupCalls = mutableListOf<String>()
         val vm = AppViewModel(
             primaryRepository = InMemoryTransactionRepository(listOf(transaction("source"))),
@@ -522,7 +522,6 @@ class AppViewModelTest {
         )
         advanceUntilIdle()
         vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
-        vm.onViewSourceMessage()
         advanceUntilIdle()
 
         val source = vm.uiState.value.transactions.sourceView
@@ -530,7 +529,7 @@ class AppViewModelTest {
         assertEquals("SYNTHETIC MESSAGE BODY", (source as SourceViewUiState.Found).body)
         assertEquals(listOf("ANDROID_SMS:source"), lookupCalls)
 
-        vm.onDismissSourceMessage()
+        vm.onTransactionClosed()
         assertNull(vm.uiState.value.transactions.sourceView)
     }
 
@@ -549,7 +548,6 @@ class AppViewModelTest {
         )
         advanceUntilIdle()
         vm.onTransactionSelected(vm.uiState.value.transactions.transactions.single().id)
-        vm.onViewSourceMessage()
 
         assertEquals(
             SourceViewUiState.Unavailable(SourceUnavailableReason.PERMISSION_REVOKED),
@@ -573,14 +571,10 @@ class AppViewModelTest {
         advanceUntilIdle()
         val id = vm.uiState.value.transactions.transactions.single().id
         vm.onTransactionSelected(id)
-        vm.onViewSourceMessage()
         advanceUntilIdle()
         assertNotNull(vm.uiState.value.transactions.sourceView)
 
         vm.onTransactionSelected(id)
-        assertNull(vm.uiState.value.transactions.sourceView)
-
-        vm.onViewSourceMessage()
         advanceUntilIdle()
         assertNotNull(vm.uiState.value.transactions.sourceView)
         vm.onTransactionClosed()

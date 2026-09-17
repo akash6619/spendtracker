@@ -190,16 +190,11 @@
     <string name="detail_kind">%1$s · %2$s</string>
     <string name="detail_account">Account ending ••••%1$s</string>
     <string name="detail_confidence">Detection confidence: %1$d%%</string>
-    <string name="action_view_source">View source message</string>
-    <string name="action_view">View</string>
-    <string name="source_dialog_title">Original message</string>
     <string name="source_loading">Reading message…</string>
     <string name="source_sender">%1$s · %2$s</string>
     <string name="source_unavailable_permission">SMS permission is required to show the original message. Re-enable it in app settings.</string>
     <string name="source_unavailable_missing">The original message is no longer available on this device. It may have been deleted or replaced.</string>
     <string name="source_unavailable_error">The original message could not be read right now.</string>
-    <string name="action_close">Close</string>
-    <string name="source_ephemeral_note">The original message is shown only while this dialog is open. SpendTracker never stores message bodies.</string>
     <string name="foreign_explanation">Not included in INR totals: this transaction keeps its original currency and is not converted.</string>
     <string name="included_by_default">Included as a purchase or fee debit.</string>
     <string name="excluded_conflict">Excluded because the message contains conflicting financial details.</string>

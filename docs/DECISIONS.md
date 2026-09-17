@@ -352,3 +352,19 @@ entry that records the reason, migration impact, and affected tests.
   cannot overwrite the corrected merchant or other chosen values. Empty or
   whitespace-only merchant text is stored as a missing merchant. No schema or
   privacy-boundary change is required.
+
+## D-024 — Load the source message with transaction detail
+
+- Date: 2026-09-17
+- Status: Accepted
+- Decision: Opening a transaction detail automatically resolves its persisted
+  Android SMS provider row ID and displays the verified source message inline
+  below the transaction fields. There is no separate View button or dialog.
+- Reason: The source message is supporting context for checking the parsed
+  transaction and should be visible without another interaction.
+- Consequence: This supersedes D-017 only for lookup timing and presentation.
+  The fetched row must still match the stored installation-local fingerprint;
+  its sender, timestamp, and body remain ephemeral UI state, are cleared when
+  the detail closes or selection changes, and never enter the transaction,
+  database, cache, or logs. Missing messages and revoked permission remain safe
+  inline states.

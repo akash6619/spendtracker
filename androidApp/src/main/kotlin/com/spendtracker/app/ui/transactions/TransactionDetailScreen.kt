@@ -3,6 +3,7 @@ package com.spendtracker.app.ui.transactions
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -18,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,7 +29,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,8 +93,6 @@ internal fun TransactionDetailScreen(
             actions.close()
         }
     }
-    state.sourceView?.let { source -> SourceMessageDialog(source, actions.dismissSource) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -166,34 +164,57 @@ internal fun TransactionDetailScreen(
             Text(stringResource(R.string.edit_saved), color = MaterialTheme.colorScheme.primary)
         }
 
-        Surface(
-            onClick = actions.viewSource,
+        SourceMessageSection(state.sourceView)
+    }
+}
+
+@Composable
+private fun SourceMessageSection(source: SourceViewUiState?) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag("view_source_message"),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            shape = MaterialTheme.shapes.medium,
+                .padding(SpendTrackerSpacing.CompactGroupPadding),
+            verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = SpendTrackerSpacing.MinimumTouchTarget)
-                    .padding(SpendTrackerSpacing.CompactGroupPadding),
-                horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.TightGap),
+            Text(stringResource(R.string.detail_source_section), style = MaterialTheme.typography.titleSmall)
+            when (source) {
+                null,
+                SourceViewUiState.Loading -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
                 ) {
-                    Text(stringResource(R.string.detail_source_section), style = MaterialTheme.typography.bodyLarge)
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    Text(stringResource(R.string.source_loading), style = MaterialTheme.typography.bodyMedium)
+                }
+
+                is SourceViewUiState.Found -> {
                     Text(
-                        stringResource(R.string.source_ephemeral_note),
-                        style = MaterialTheme.typography.bodySmall,
+                        stringResource(
+                            R.string.source_sender,
+                            source.sender,
+                            formatDate(source.receivedAtEpochMillis),
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Text(
+                        source.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("source_message_body"),
+                    )
                 }
-                Text(stringResource(R.string.action_view), color = MaterialTheme.colorScheme.primary)
+
+                is SourceViewUiState.Unavailable -> Text(
+                    stringResource(source.reason.labelResource()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
     }
@@ -301,13 +322,17 @@ private fun TransactionSummary(
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    IconButton(
-                        onClick = onEditDetails,
-                        modifier = Modifier.testTag("edit_merchant"),
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .testTag("edit_merchant")
+                            .clickable(onClick = onEditDetails),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             Icons.Outlined.Edit,
                             contentDescription = stringResource(R.string.action_edit_merchant),
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
@@ -413,55 +438,6 @@ private fun DetailFactRow(label: String, value: String, showDivider: Boolean = t
         }
         if (showDivider) HorizontalDivider()
     }
-}
-
-@Composable
-private fun SourceMessageDialog(source: SourceViewUiState, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.source_dialog_title)) },
-        text = {
-            when (source) {
-                SourceViewUiState.Loading -> Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.SectionGap),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    Text(stringResource(R.string.source_loading))
-                }
-
-                is SourceViewUiState.Found -> Column(
-                    verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
-                ) {
-                    Text(
-                        stringResource(
-                            R.string.source_sender,
-                            source.sender,
-                            formatDate(source.receivedAtEpochMillis),
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-                    Text(
-                        source.body,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 320.dp)
-                            .verticalScroll(rememberScrollState())
-                            .testTag("source_message_body"),
-                    )
-                }
-
-                is SourceViewUiState.Unavailable -> Text(
-                    stringResource(source.reason.labelResource()),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
-        },
-    )
 }
 
 @StringRes

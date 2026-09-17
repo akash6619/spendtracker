@@ -85,7 +85,7 @@ Currently contains:
 - application-scoped Room repository for production data
 - Android Keystore-backed keyed source fingerprints
 - `SmsSourceLookup` resolving the persisted provider row ID into an ephemeral
-  on-demand source-message dialog that never persists or logs the body
+  inline transaction-detail section that never persists or logs the body
 - debug-only synthetic repository/data and a release variant with no demo source
 - ViewModel unit tests and connected Compose navigation/state tests
 

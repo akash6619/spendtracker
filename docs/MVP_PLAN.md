@@ -359,7 +359,8 @@ dashboard totals.
       app restart/reparse.
 - [x] Foreign amount formatting uses its own currency/fraction digits.
 - [x] Excluded records visibly explain why they do not affect spend.
-- [x] No UI exposes full source body except an explicit ephemeral source view.
+- [x] The detail UI exposes a full source body only as ephemeral state fetched
+      when that transaction view opens; it is never stored with the transaction.
 
 ### Test gate
 

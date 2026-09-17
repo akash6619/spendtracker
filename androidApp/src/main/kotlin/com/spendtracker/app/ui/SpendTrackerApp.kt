@@ -73,8 +73,6 @@ fun SpendTrackerApp(
             close = viewModel::onTransactionClosed,
             update = viewModel::onUpdateTransaction,
             retry = viewModel::onRetryTransactions,
-            viewSource = viewModel::onViewSourceMessage,
-            dismissSource = viewModel::onDismissSourceMessage,
         ),
         dashboardActions = DashboardActions(
             onPeriodSelected = viewModel::onDashboardPeriodSelected,

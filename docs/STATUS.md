@@ -18,6 +18,14 @@ Agents must claim work here before implementation and clear the row at handoff.
 
 ## Implemented now
 
+- Transaction detail now fetches its verified source SMS automatically by the
+  persisted Android provider row ID when the view opens and renders the sender,
+  timestamp, and real message body inline. The raw values remain ephemeral UI
+  state and are cleared on close/selection change; they are never added to the
+  transaction or persisted (D-024). Shared/JVM tests, Android unit tests, lint,
+  debug assembly, and the full connected Android test suite pass on the
+  `SpendTracker_API_37` API 37 emulator.
+
 - PAR-01C changes built-in merchant categorization from whole-word matching to
   substring matching across every keyword. `INSTAMART` is an independent first
   rule, so any merchant containing it maps to Groceries before a containing
@@ -160,13 +168,13 @@ Agents must claim work here before implementation and clear the row at handoff.
   default-false `foreignOnly` dimension.
 - Dashboard facts recompute on ledger changes, period switches, and app resume,
   so time-zone changes regroup boundaries without data loss (D-016).
-- On-demand `View source message` in transaction detail resolves the persisted
-  SMS provider row ID at display time and verifies the fetched row against the
-  stored installation-local fingerprint before showing anything, so a reused
-  provider ID can never display an unrelated SMS. The body stays in an ephemeral
-  dialog, is cleared on dismiss/selection change/close, and is never persisted
-  or logged (D-017). Unavailable messages and revoked permission get explicit
-  safe explanations.
+- Opening transaction detail resolves the persisted SMS provider row ID and
+  verifies the fetched row against the stored installation-local fingerprint
+  before showing the real message inline, so a reused provider ID can never
+  display an unrelated SMS. Sender, timestamp, and body remain ephemeral UI
+  state, are cleared on selection change/close, and are never part of the
+  transaction, persisted, cached, or logged (D-017, D-024). Unavailable messages
+  and revoked permission get explicit safe explanations.
 - Saving a category resolves only the category review concern (D-018): an
   explicit category drops `UNKNOWN_CATEGORY`, other stored reasons survive, and
   confidence follows the surviving set. A missing merchant no longer flags

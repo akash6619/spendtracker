@@ -159,6 +159,7 @@ class AppViewModel(
             selected = ledger.firstOrNull { row -> row.id == id },
             saveFailed = false, saveSucceeded = false,
         )) }
+        loadSourceMessage()
     }
 
     fun onTransactionClosed() {
@@ -167,10 +168,8 @@ class AppViewModel(
         _uiState.update { it.copy(transactions = it.transactions.copy(selected = null)) }
     }
 
-    fun onViewSourceMessage() {
+    private fun loadSourceMessage() {
         val selected = _uiState.value.transactions.selected ?: return
-        if (_uiState.value.transactions.sourceView == SourceViewUiState.Loading) return
-        dismissSourceView()
         val lookup = sourceMessageLookup
         val permissionGranted = platformPermissionGranted
         val sourceView = when {
@@ -187,6 +186,7 @@ class AppViewModel(
             try {
                 val result = lookup!!.lookup(selected)
                 _uiState.update {
+                    if (it.transactions.selected?.id != selected.id) return@update it
                     it.copy(transactions = it.transactions.copy(
                         sourceView = when (result) {
                             is SourceLookupResult.Found -> SourceViewUiState.Found(
@@ -202,6 +202,7 @@ class AppViewModel(
                 throw cancellation
             } catch (_: Exception) {
                 _uiState.update {
+                    if (it.transactions.selected?.id != selected.id) return@update it
                     it.copy(transactions = it.transactions.copy(
                         sourceView = SourceViewUiState.Unavailable(SourceUnavailableReason.LOOKUP_FAILED),
                     ))
@@ -209,8 +210,6 @@ class AppViewModel(
             }
         }
     }
-
-    fun onDismissSourceMessage() = dismissSourceView()
 
     private fun dismissSourceView() {
         sourceJob?.cancel()
