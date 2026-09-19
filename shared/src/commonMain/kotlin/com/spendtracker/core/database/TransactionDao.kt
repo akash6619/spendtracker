@@ -102,7 +102,8 @@ interface TransactionDao {
     suspend fun categoryTotals(fromInclusive: Long, toExclusive: Long): List<CategoryTotal>
 
     @Transaction
-    suspend fun upsertAll(incoming: List<TransactionEntity>) {
+    suspend fun upsertAll(incoming: List<TransactionEntity>): List<String> {
+        val insertedIds = mutableListOf<String>()
         incoming.forEach { candidate ->
             // Fingerprint is authoritative because Android may reuse provider row IDs.
             val fingerprintMatch = findByFingerprint(candidate.sourceType, candidate.sourceFingerprint)
@@ -130,6 +131,8 @@ interface TransactionDao {
                 }
             }
             insert(candidate)
+            insertedIds += candidate.id
         }
+        return insertedIds
     }
 }

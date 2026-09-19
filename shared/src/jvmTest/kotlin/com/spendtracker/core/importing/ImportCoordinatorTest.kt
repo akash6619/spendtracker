@@ -123,6 +123,28 @@ class ImportCoordinatorTest {
     }
 
     @Test
+    fun reconciliationReportsOnlyRowsInsertedByThatRun() = runTest {
+        val transactions = RecordingTransactionRepository()
+        val reported = mutableListOf<LedgerTransaction>()
+        val source = GeneratedMessageSource(1)
+        val coordinator = coordinator(
+            source = source,
+            transactions = transactions,
+            states = FakeImportStateRepository(),
+            onTransactionsInserted = { mode, rows ->
+                assertEquals(ImportMode.RECONCILIATION, mode)
+                reported += rows
+            },
+        )
+
+        coordinator.run(ImportMode.RECONCILIATION) {}
+        coordinator.run(ImportMode.RECONCILIATION) {}
+
+        assertEquals(1, reported.size)
+        assertEquals("0", reported.single().sourceFingerprint)
+    }
+
+    @Test
     fun tenThousandMessagesNeverExceedConfiguredBatch() = runTest {
         val transactions = RecordingTransactionRepository()
         val result = coordinator(
@@ -144,6 +166,7 @@ class ImportCoordinatorTest {
         historyCutoff: Long = 1_000,
         batchSize: Int = 100,
         overlap: Long = 300_000,
+        onTransactionsInserted: suspend (ImportMode, List<LedgerTransaction>) -> Unit = { _, _ -> },
     ) = ImportCoordinator(
         messageSource = source,
         parser = FinancialMessageParser(),
@@ -154,6 +177,7 @@ class ImportCoordinatorTest {
         nowEpochMillis = { 30_000 },
         batchSize = batchSize,
         reconciliationOverlapMillis = overlap,
+        onTransactionsInserted = onTransactionsInserted,
     )
 
     private fun message(id: String) = SourceMessage(
@@ -208,10 +232,41 @@ private class RecordingTransactionRepository : TransactionRepository {
 
     override fun observeTransactions(): Flow<List<LedgerTransaction>> = MutableStateFlow(emptyList())
     override suspend fun upsert(transactions: List<TransactionCandidate>) {
+        upsertAndGetInserted(transactions)
+    }
+
+    override suspend fun upsertAndGetInserted(
+        transactions: List<TransactionCandidate>,
+    ): List<LedgerTransaction> {
         maxBatchSize = maxOf(maxBatchSize, transactions.size)
-        fingerprints += transactions.map { it.sourceFingerprint }
+        return transactions.mapNotNull { candidate ->
+            if (!fingerprints.add(candidate.sourceFingerprint)) return@mapNotNull null
+            candidate.transaction.let { parsed ->
+                LedgerTransaction(
+                    id = "${candidate.sourceType}:${candidate.sourceFingerprint}",
+                    sourceType = candidate.sourceType,
+                    sourceProviderId = candidate.sourceProviderId,
+                    sourceFingerprint = candidate.sourceFingerprint,
+                    sourceReceivedAtEpochMillis = parsed.sourceReceivedAtEpochMillis,
+                    money = parsed.money,
+                    direction = parsed.direction,
+                    kind = parsed.kind,
+                    category = parsed.category,
+                    merchant = parsed.merchant,
+                    accountHint = parsed.accountHint,
+                    confidence = parsed.confidence,
+                    parserVersion = parsed.parserVersion,
+                    reviewReasons = parsed.reviewReasons,
+                    includedInSpend = parsed.includedInSpend,
+                )
+            }
+        }
     }
     override suspend fun getById(id: String): LedgerTransaction? = null
+    override suspend fun getByFingerprint(
+        sourceType: com.spendtracker.core.model.SourceType,
+        fingerprint: String,
+    ): LedgerTransaction? = null
     override suspend fun updateTransaction(
         id: String,
         merchant: String?,

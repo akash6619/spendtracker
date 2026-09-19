@@ -28,6 +28,17 @@ import kotlin.test.assertTrue
 
 class RoomTransactionRepositoryTest {
     @Test
+    fun atomicUpsertReturnsOnlyNewlyInsertedRows() = runTest {
+        withRepository { repository, _ ->
+            val first = repository.upsertAndGetInserted(listOf(candidate("7", "same")))
+            val duplicate = repository.upsertAndGetInserted(listOf(candidate("7", "same")))
+
+            assertEquals(listOf("same"), first.map { it.sourceFingerprint })
+            assertTrue(duplicate.isEmpty())
+        }
+    }
+
+    @Test
     fun persistsAcrossReopenAndDoesNotDuplicate() = runTest {
         val file = Files.createTempFile("spendtracker", ".db").toFile().apply { delete() }
         val firstDatabase = createSpendTrackerDatabase(file)

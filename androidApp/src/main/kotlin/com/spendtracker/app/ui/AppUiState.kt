@@ -126,6 +126,8 @@ data class SettingsUiState(
     val lastScanEpochMillis: Long? = null,
     val parserVersion: Int = 1,
     val storedTransactionCount: Int = 0,
+    val notificationAccessGranted: Boolean = false,
+    val transactionNotificationsGranted: Boolean = false,
     val showDeleteConfirm: Boolean = false,
     val isDeletingAll: Boolean = false,
     val deleteAllFailed: Boolean = false,

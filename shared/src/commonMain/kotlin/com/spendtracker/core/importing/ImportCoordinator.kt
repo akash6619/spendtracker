@@ -1,5 +1,6 @@
 package com.spendtracker.core.importing
 
+import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.SourceType
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.parser.FinancialMessageParser
@@ -28,6 +29,7 @@ class ImportCoordinator(
     private val nowEpochMillis: () -> Long,
     private val batchSize: Int = DEFAULT_BATCH_SIZE,
     private val reconciliationOverlapMillis: Long = DEFAULT_OVERLAP_MILLIS,
+    private val onTransactionsInserted: suspend (ImportMode, List<LedgerTransaction>) -> Unit = { _, _ -> },
 ) : ImportRunner {
     init {
         require(batchSize > 0) { "Batch size must be positive" }
@@ -55,12 +57,11 @@ class ImportCoordinator(
 
         suspend fun flush() {
             if (pending.isEmpty()) return
-            val countBefore = transactionRepository.count()
-            transactionRepository.upsert(pending.toList())
-            val newlySaved = (transactionRepository.count() - countBefore).coerceAtLeast(0)
+            val inserted = transactionRepository.upsertAndGetInserted(pending.toList())
             pending.clear()
-            progress = progress.copy(savedTransactions = progress.savedTransactions + newlySaved)
+            progress = progress.copy(savedTransactions = progress.savedTransactions + inserted.size)
             onProgress(progress)
+            onTransactionsInserted(mode, inserted)
         }
 
         try {

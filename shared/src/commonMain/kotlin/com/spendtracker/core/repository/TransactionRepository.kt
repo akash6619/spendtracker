@@ -3,6 +3,7 @@ package com.spendtracker.core.repository
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.SpendCategory
+import com.spendtracker.core.model.SourceType
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
@@ -20,7 +21,12 @@ interface TransactionRepository {
 
     suspend fun upsert(transactions: List<TransactionCandidate>)
 
+    /** Atomically persists candidates and returns only rows inserted by this call. */
+    suspend fun upsertAndGetInserted(transactions: List<TransactionCandidate>): List<LedgerTransaction>
+
     suspend fun getById(id: String): LedgerTransaction?
+
+    suspend fun getByFingerprint(sourceType: SourceType, fingerprint: String): LedgerTransaction?
 
     suspend fun updateTransaction(
         id: String,

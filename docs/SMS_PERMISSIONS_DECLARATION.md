@@ -13,14 +13,14 @@ subject to Play's review and declaration.
 
 ## Access model
 
-- Only `READ_SMS` is declared. No `RECEIVE_SMS`, no `INTERNET`, no call-log or
-  account permissions.
+- `READ_SMS` and Android 13+ `POST_NOTIFICATIONS` are declared. No `RECEIVE_SMS`,
+  no `INTERNET`, and no call-log or account permissions.
 - Reading is scoped to the previous three calendar months for the initial import
   and to messages since the last successful scan (plus a small overlap) for
   automatic foreground reconciliation on app open.
-- New-message pickup is foreground only: on Android 14+ a non-default SMS app
-  cannot receive full SMS bodies in broadcasts. There is no background
-  notification/observer.
+- Optional immediate pickup uses a notification listener as a signal for a
+  narrow recent-provider scan. It never reads notification content and is not
+  an SMS broadcast receiver.
 
 ## Core functionality requirement
 

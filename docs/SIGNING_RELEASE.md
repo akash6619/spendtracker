@@ -42,7 +42,8 @@ keyPassword=...
 3. Independent recalc of seeded weekly/monthly totals equals the dashboard.
 4. Inspect Logcat, the app database, and the merged release manifest for privacy
    leaks: no raw SMS, no sender/merchant/amount/account content logged.
-5. Confirm the release manifest declares only `READ_SMS` and has no `INTERNET`.
+5. Confirm the release manifest declares `READ_SMS` and `POST_NOTIFICATIONS`,
+   binds only the documented notification listener, and has no `INTERNET`.
 
 ## Controlled-tester distribution
 

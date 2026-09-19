@@ -27,6 +27,7 @@ import com.spendtracker.core.repository.ImportStateRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.TimeZone
@@ -53,6 +54,43 @@ class AppViewModelTest {
 
     // Wednesday 2026-09-09, inside the UTC week starting Monday 2026-09-07.
     private val fixedNow: Long = Instant.parse("2026-09-09T12:00:00Z").toEpochMilli()
+
+    @Test
+    fun notificationTapOpensMatchingTransactionDetailWhenLedgerLoads() = runTest {
+        val repository = InMemoryTransactionRepository(listOf(transaction("notified")))
+        val id = repository.observeTransactions().first().single().id
+        val vm = viewModel(repository, FakeImportStateRepository(), ImportRunner { _, _ -> ImportState() }, true)
+        vm.onOpenTransactionFromNotification(id)
+        advanceUntilIdle()
+
+        assertEquals(TopLevelDestination.TRANSACTIONS, vm.uiState.value.selectedDestination)
+        assertEquals(id, vm.uiState.value.transactions.selected?.id)
+    }
+
+    @Test
+    fun notificationTapLeavesDemoModeAndOpensPrimaryTransaction() = runTest {
+        val primary = InMemoryTransactionRepository(listOf(transaction("real-notified")))
+        val notifiedId = primary.observeTransactions().first().single().id
+        val vm = AppViewModel(
+            primaryRepository = primary,
+            importStateRepository = FakeImportStateRepository(),
+            demoRepository = InMemoryTransactionRepository(listOf(transaction("synthetic-demo"))),
+            importRunner = ImportRunner { _, _ -> ImportState() },
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+        )
+        advanceUntilIdle()
+        vm.onUseDemoData()
+        advanceUntilIdle()
+
+        vm.onOpenTransactionFromNotification(notifiedId)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.usingDemoData)
+        assertEquals(TopLevelDestination.TRANSACTIONS, vm.uiState.value.selectedDestination)
+        assertEquals(notifiedId, vm.uiState.value.transactions.selected?.id)
+    }
 
     @Test
     fun editsUpdateFilteredListAndDashboardWithoutClosingDetailAndCanSaveAgain() = runTest {

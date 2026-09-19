@@ -51,7 +51,7 @@ class SpendTrackerAppTest {
         composeRule.onNodeWithTag(UiTestTags.NAV_TRANSACTIONS).performClick()
         composeRule.onNodeWithText("Filters").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_SETTINGS).performClick()
-        composeRule.onNodeWithText("Local-only MVP").assertIsDisplayed()
+        composeRule.onNodeWithText("Instant transaction detection").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.NAV_DASHBOARD).performClick()
         composeRule.onNodeWithText("No recognized spend yet").assertIsDisplayed()
     }

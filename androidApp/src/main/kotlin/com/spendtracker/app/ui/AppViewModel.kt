@@ -64,6 +64,7 @@ class AppViewModel(
     private var importObservation: Job? = null
     private var importJob: Job? = null
     private var deleteJob: Job? = null
+    private var pendingTransactionId: String? = null
     private var platformPermissionGranted = initialPermissionGranted
     private var shouldShowPermissionRationale = false
     private var permissionRequested = false
@@ -119,6 +120,33 @@ class AppViewModel(
 
     fun onDestinationSelected(destination: TopLevelDestination) {
         _uiState.update { it.copy(selectedDestination = destination) }
+    }
+
+    fun onNotificationCapabilitiesChanged(listenerGranted: Boolean, notificationsGranted: Boolean) {
+        _uiState.update {
+            it.copy(settings = it.settings.copy(
+                notificationAccessGranted = listenerGranted,
+                transactionNotificationsGranted = notificationsGranted,
+            ))
+        }
+    }
+
+    /** Opens a stored transaction requested by an Android notification tap. */
+    fun onOpenTransactionFromNotification(id: String) {
+        pendingTransactionId = id
+        if (_uiState.value.usingDemoData) {
+            _uiState.update {
+                it.copy(
+                    stage = AppStage.MAIN,
+                    selectedDestination = TopLevelDestination.TRANSACTIONS,
+                    usingDemoData = false,
+                    error = null,
+                )
+            }
+            observe(primaryRepository)
+            applyImportState(durableImportState)
+        }
+        openPendingTransactionIfAvailable()
     }
 
     fun onDashboardPeriodSelected(period: DashboardPeriod) {
@@ -382,6 +410,27 @@ class AppViewModel(
                 ),
             )
         }
+        openPendingTransactionIfAvailable()
+    }
+
+    private fun openPendingTransactionIfAvailable() {
+        val id = pendingTransactionId ?: return
+        val transaction = ledger.firstOrNull { it.id == id } ?: return
+        pendingTransactionId = null
+        dismissSourceView()
+        _uiState.update {
+            it.copy(
+                stage = AppStage.MAIN,
+                selectedDestination = TopLevelDestination.TRANSACTIONS,
+                usingDemoData = false,
+                transactions = it.transactions.copy(
+                    selected = transaction,
+                    saveFailed = false,
+                    saveSucceeded = false,
+                ),
+            )
+        }
+        loadSourceMessage()
     }
 
     /**

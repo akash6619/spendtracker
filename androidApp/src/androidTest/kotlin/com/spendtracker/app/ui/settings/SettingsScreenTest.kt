@@ -26,6 +26,25 @@ class SettingsScreenTest {
     val compose = createComposeRule()
 
     @Test
+    fun instantDetectionIsOffWhenSmsPermissionIsMissing() {
+        compose.setContent {
+            SpendTrackerTheme {
+                SettingsScreen(
+                    AppUiState(
+                        stage = AppStage.MAIN,
+                        permission = PermissionUiState.DENIED,
+                        settings = SettingsUiState(notificationAccessGranted = true),
+                    ),
+                )
+            }
+        }
+
+        compose.onNodeWithText("Instant transaction detection").assertIsDisplayed()
+        compose.onNodeWithText("Off").assertIsDisplayed()
+        compose.onNodeWithText("Manage notification access").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun statusShowsLastScanParserVersionAndStoredCount() {
         compose.setContent {
             SpendTrackerTheme {

@@ -92,6 +92,9 @@ merchant in future messages.
 - Detect new SMS messages with Android platform APIs after permission is granted.
 - Parse and save through the same idempotent pipeline used by history import.
 - Refresh dashboard and transaction views without an app restart.
+- With explicit notification access, use messaging events as content-free signals
+  for immediate background reconciliation and show a parsed transaction alert.
+- Tapping a transaction alert opens that stored transaction's detail view.
 - Never show message bodies in a notification or log.
 
 ### Privacy and settings
@@ -140,4 +143,3 @@ The MVP is releasable for controlled testing when:
 
 Product-market metrics such as retention are deliberately deferred until a
 privacy-preserving analytics strategy is explicitly approved.
-

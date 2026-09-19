@@ -70,6 +70,13 @@ confidence. The single-value model (D-019) adds repository tests that re-imports
 refresh untouched rows and skip user-edited rows, plus the version-1-to-5
 migration chain.
 
+ENH-03 adds a live-ingestor test proving an accepted recent message is returned
+only after persistence, repeat signals do not return it again, and rejected text
+does not enter the ledger. ViewModel coverage verifies that an alert tap selects
+the exact stored record. Physical-device validation must cover notification-access
+granting, OEM provider timing, Android 13+ alert permission, private lock-screen
+presentation, and tap routing.
+
 ### Android local unit tests
 
 MVP-06 tests combined filter boundaries/currencies against Room, override

@@ -1,6 +1,6 @@
 # Current status
 
-- Last updated: 2026-09-17
+- Last updated: 2026-09-19
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
 - Next recommended work: UI-05 accessibility and visual release gate, then
@@ -17,6 +17,24 @@ Agents must claim work here before implementation and clear the row at handoff.
 | --- | --- | --- | --- | --- |
 
 ## Implemented now
+
+- ENH-03 adds explicitly opt-in immediate background detection. Notifications
+  from the current default SMS app, including silent notifications, are content-
+  free signals: after a short settle delay the app scans a two-minute recent SMS-
+  provider window through the existing parser, keyed fingerprint, and Room
+  deduplication. Persistence atomically reports newly inserted rows, so either
+  live ingestion or foreground reconciliation can produce one private parsed-
+  facts alert without losing it to a race. Tapping opens that exact transaction
+  detail. Notification title/body text is never read or retained (D-025).
+  Settings reflects runtime, app-level, and alert-channel notification blocking
+  and routes recovery to Android notification settings. Its detection status also
+  requires SMS access. Alert taps leave debug demo mode before resolving the
+  stored transaction from the primary ledger. Automated gates pass; physical OEM
+  validation remains pending.
+  Transaction alerts now use a new high-importance channel and high priority so
+  Android presents them as heads-up banners when the user/device permits pop-on-
+  screen alerts. API 37 verification confirmed channel importance 4, persistence,
+  notification-shade rendering, and transaction-detail tap routing.
 
 - Transaction detail now fetches its verified source SMS automatically by the
   persisted Android provider row ID when the view opens and renders the sender,
@@ -203,14 +221,15 @@ Agents must claim work here before implementation and clear the row at handoff.
   count), what-counts-as-spend and foreign no-conversion explanations, and an
   in-app privacy disclosure. `Delete all SpendTracker data` clears the database
   and fingerprint key after confirmation and returns to onboarding; revoking
-  access is explained as the separate non-destructive action. Manifest audit:
-  `READ_SMS` only, backup disabled, no `INTERNET`, no network/analytics deps.
+  access is explained as the separate non-destructive action. Manifest audit now
+  includes `READ_SMS`, `POST_NOTIFICATIONS`, and the system-bound listener;
+  backup remains disabled with no `INTERNET` or network/analytics dependencies.
 - Release gate (MVP-10): optional release signing via git-ignored
   `keystore.properties`; release variant has no demo repository; no `Log` or
   analytics calls exist. Release material added (`SIGNING_RELEASE.md`,
   `STORE_LISTING_AND_PRIVACY.md`, `SMS_PERMISSIONS_DECLARATION.md`). Automated
-  10k-message import is bounded with zero duplicates. Merged release manifest:
-  `READ_SMS` only, `allowBackup=false`, no `INTERNET`.
+  10k-message import is bounded with zero duplicates. Merged release manifest
+  must now include the ENH-03 notification capability audit before release.
 - Sixty shared JVM tests, twenty-four Android local tests, fourteen connected
   Compose tests, two connected importer/provider tests, and one connected
   Keystore test.
@@ -469,11 +488,10 @@ suite passed on `SpendTracker_API_37`.
   Unsaved editor drafts are not restored after process death.
 - Source viewing relies on the system SMS provider; live-found-path behavior on
   OEM providers and physical devices remains release work.
-- There is no `RECEIVE_SMS` live ingestion (D-020): on Android 14+ a non-default
-  SMS app cannot receive full SMS bodies in broadcasts. New messages are picked
-  up by automatic foreground reconciliation on every app open; the manual
-  "Check for new messages" button was removed. Instant live pickup via
-  notification-listener access remains a post-MVP opt-in candidate.
+- There is no `RECEIVE_SMS` ingestion. ENH-03/D-025 uses explicitly granted
+  notification access only as a content-free signal for narrow recent-provider
+  reconciliation; app-open reconciliation remains the recovery path. Physical
+  device/OEM listener and provider-timing validation is pending.
 - Real SMS-provider behavior and physical-device checks remain release work;
   automated importer integration uses a synthetic source and real Room database.
 - Public release requires Google Play restricted-SMS-permission review material.

@@ -368,3 +368,21 @@ entry that records the reason, migration impact, and affected tests.
   the detail closes or selection changes, and never enter the transaction,
   database, cache, or logs. Missing messages and revoked permission remain safe
   inline states.
+
+## D-025 — Notification access is a signal, not a financial-data source
+
+- Date: 2026-09-17
+- Status: Accepted
+- Decision: Immediate background detection is explicitly opt-in through Android's
+  notification-listener settings. The listener accepts messaging events but never
+  extracts their title or body. It waits briefly, scans a narrow recent window
+  from the SMS provider, and uses the existing parser, keyed fingerprint, and
+  repository. A newly persisted row may produce a private heads-up parsed-facts-only alert;
+  its immutable explicit pending intent opens that transaction's detail. Android
+  13+ notification posting is a separate runtime grant.
+- Reason: Notification access supplies the background signal while the verified
+  SMS provider remains the source of truth. This avoids retaining or parsing the
+  broader notification stream and keeps live and foreground source identity equal.
+- Consequence: This supersedes D-020's deferral of live pickup while retaining
+  foreground reconciliation as recovery. Live delivery depends on a messaging
+  notification and provider timing, so physical OEM validation remains required.

@@ -18,8 +18,9 @@ How it works
   messages from your inbox on this device.
 - It detects supported card, bank, and UPI transaction alerts, extracts the
   amount, currency, merchant, and category, and stores parsed records locally.
-- New financial messages are picked up automatically the next time you open the
-  app. You can correct a category or include/exclude any transaction.
+- New financial messages are reconciled whenever you open the app. If you enable
+  notification access, messaging alerts can also trigger immediate local pickup;
+  SpendTracker does not read their text. You can correct parsed transaction facts.
 
 Privacy
 - Message bodies are read only to recognize a transaction and are never saved,
@@ -31,7 +32,9 @@ Privacy
   or use Delete all SpendTracker data in Settings to remove everything stored.
 
 Important
-- Only `READ_SMS` is requested, for the money-management function described.
+- `READ_SMS` supports the money-management function. Android 13+ notification
+  permission and notification-listener access are optional and used for immediate
+  parsed transaction alerts; `RECEIVE_SMS` is not requested.
 - Foreign-currency records keep their original currency and are not converted.
 - This is not a bank, and SpendTracker does not have access to your accounts.
 

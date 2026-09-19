@@ -37,6 +37,7 @@ slice begins.
 | PAR-01B | Merchant identity refinement | Complete | PAR-01A | Card descriptions are skipped and concatenated Swiggy identities receive the intended category |
 | PAR-01C | Merchant substring categorization | Complete | PAR-01B | Embedded merchant keywords categorize deterministically with Instamart precedence |
 | ENH-02 | Immediate transaction detail editing | Complete | MVP-06 | Users can edit merchants, categories, and spend inclusion without a separate save tap |
+| ENH-03 | Immediate notification ingestion | Complete (automated gates; physical-device/OEM validation pending) | MVP-08, MVP-06 | Opted-in users get newly parsed transactions immediately and can open their detail from an alert |
 
 ## PAR-01A — First deterministic parser refinement
 
@@ -661,6 +662,34 @@ preserving filtering, editing, source lookup, and dashboard deep-link behavior.
 
 ---
 
+## ENH-03 — Immediate notification-triggered ingestion
+
+**Status:** Complete (automated gates; physical-device/OEM validation pending)
+**Depends on:** MVP-08, MVP-06
+
+### Goal
+
+Let an explicitly opted-in user receive a transaction alert shortly after a
+financial SMS arrives, even while SpendTracker is closed.
+
+### Delivered and acceptance gate
+
+- [x] A `NotificationListenerService` treats default-SMS-app notifications, including silent notifications, as signals
+      only; notification titles and bodies are never read, stored, or logged.
+- [x] A delayed two-minute SMS-provider window uses the existing parser, keyed
+      fingerprint, Room persistence, and deduplication.
+- [x] Only a newly stored transaction produces a private heads-up parsed-facts alert;
+      app-open reconciliation remains the recovery path without duplication.
+- [x] Settings explains Android's broad access and links to the system grant;
+      Android 13+ notification posting is requested separately.
+- [x] An immutable explicit pending intent opens the matching transaction detail.
+- [x] Unit tests cover accepted/rejected/repeat ingestion and alert-tap routing;
+      shared/JVM, Android unit, lint, and debug assembly gates pass.
+- [ ] Validate listener/provider timing and lock-screen behavior on a physical
+      OEM device before release.
+
+---
+
 ## MVP-10 — Hardening and controlled-release gate
 
 **Status:** Ready (deferred while product enhancements are in progress)
@@ -693,8 +722,9 @@ and a Google Play permission review submission.
   reinstall behaviors verified by automated tests and emulator checks.
 - Release signing is wired to an optional, git-ignored `keystore.properties`;
   without it the release APK builds unsigned. Release variant returns no demo
-  repository; there are no `Log`/analytics/network calls to strip, and the merged
-  release manifest declares only `READ_SMS` (backup disabled, no `INTERNET`).
+  repository; there are no `Log`/analytics/network calls to strip. The manifest
+  declares `READ_SMS`, `POST_NOTIFICATIONS`, and the system-bound notification
+  listener; backup is disabled and there is no `INTERNET` permission.
 - Release material added: `SIGNING_RELEASE.md`, `STORE_LISTING_AND_PRIVACY.md`,
   and `SMS_PERMISSIONS_DECLARATION.md`.
 - Accessibility: font-scale (150%) and TalkBack/`contentDescription` spot checks

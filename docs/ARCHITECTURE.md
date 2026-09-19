@@ -82,6 +82,8 @@ Currently contains:
 - `ImportCoordinator` streaming source rows through parser, fingerprinting, and bounded upserts
 - complete permission states, cancellable progress, retry, and settings recovery
 - foreground reconciliation based on the last successful scan
+- opt-in notification-listener signaling, narrow recent-SMS ingestion, local
+  transaction alerts, and transaction-detail pending-intent routing
 - application-scoped Room repository for production data
 - Android Keystore-backed keyed source fingerprints
 - `SmsSourceLookup` resolving the persisted provider row ID into an ephemeral
@@ -91,7 +93,6 @@ Currently contains:
 
 Target additions:
 
-- receiver plus reconciliation scheduling
 - expanded screen-specific Compose/instrumentation tests
 
 ## Target package shape
@@ -154,6 +155,11 @@ History and live messages must share the same pipeline:
 The receiver should do minimal work and enqueue durable processing where Android
 lifecycle constraints require it. Foreground reconciliation is mandatory because
 a broadcast can be missed or delayed.
+
+The notification listener treats notifications from the current default SMS app as signals, not data
+sources. It never extracts their text. After a short delay it queries a recent
+SMS-provider window and uses the same parser, keyed fingerprint, and repository
+as foreground reconciliation.
 
 ## Persistence
 

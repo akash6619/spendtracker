@@ -56,6 +56,8 @@ fun SpendTrackerApp(
     viewModel: AppViewModel,
     onRequestSmsPermission: () -> Unit,
     onOpenAppSettings: () -> Unit,
+    onOpenNotificationAccess: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     SpendTrackerAppContent(
@@ -85,6 +87,8 @@ fun SpendTrackerApp(
         settingsActions = SettingsActions(
             onRequestPermission = onRequestSmsPermission,
             onOpenAppSettings = onOpenAppSettings,
+            onOpenNotificationAccess = onOpenNotificationAccess,
+            onRequestNotificationPermission = onRequestNotificationPermission,
             onCancelImport = viewModel::onCancelImport,
             onLeaveDemoData = viewModel::onLeaveDemoData,
             onRequestDeleteAll = viewModel::onRequestDeleteAll,

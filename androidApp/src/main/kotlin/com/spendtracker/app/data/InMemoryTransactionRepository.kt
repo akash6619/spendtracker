@@ -6,6 +6,7 @@ import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.MerchantCategoryRule
 import com.spendtracker.core.model.ReviewPolicy
 import com.spendtracker.core.model.SpendCategory
+import com.spendtracker.core.model.SourceType
 import com.spendtracker.core.model.TransactionCandidate
 import com.spendtracker.core.model.TransactionDirection
 import com.spendtracker.core.model.TransactionKind
@@ -35,10 +36,21 @@ class InMemoryTransactionRepository(
         transactions.asStateFlow()
 
     override suspend fun upsert(transactions: List<TransactionCandidate>) {
+        upsertInternal(transactions)
+    }
+
+    override suspend fun upsertAndGetInserted(
+        transactions: List<TransactionCandidate>,
+    ): List<LedgerTransaction> = upsertInternal(transactions)
+
+    private fun upsertInternal(incomingCandidates: List<TransactionCandidate>): List<LedgerTransaction> {
+        val inserted = mutableListOf<LedgerTransaction>()
         this.transactions.update { stored ->
+            // MutableStateFlow may retry this transform after a concurrent write.
+            inserted.clear()
             val storedByFingerprint = stored.associateBy { it.sourceFingerprint }
             val rulesByMerchant = merchantRules.value.associate { it.normalizedMerchant to it.category }
-            val incoming = transactions.map { candidate ->
+            val incoming = incomingCandidates.map { candidate ->
                 val existing = storedByFingerprint[candidate.sourceFingerprint]
                 val normalizedMerchant = merchantNormalizer.normalize(candidate.transaction.merchant)
                 toLedger(candidate.copy(
@@ -48,7 +60,7 @@ class InMemoryTransactionRepository(
                 )).copy(
                     id = existing?.id ?: toLedger(candidate).id,
                     userEdited = existing?.userEdited ?: false,
-                )
+                ).also { if (existing == null) inserted += it }
             }
             // User-edited rows keep their stored values; untouched rows are
             // refreshed by the fresh parse. deduplicate keeps the last entry.
@@ -57,10 +69,14 @@ class InMemoryTransactionRepository(
             }
             deduplicate(keptStored + incoming.filterNot { it.userEdited })
         }
+        return inserted
     }
 
     override suspend fun getById(id: String): LedgerTransaction? =
         transactions.value.firstOrNull { it.id == id }
+
+    override suspend fun getByFingerprint(sourceType: SourceType, fingerprint: String): LedgerTransaction? =
+        transactions.value.firstOrNull { it.sourceType == sourceType && it.sourceFingerprint == fingerprint }
 
     override suspend fun updateTransaction(
         id: String,

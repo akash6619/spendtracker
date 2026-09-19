@@ -48,6 +48,8 @@ import com.spendtracker.app.ui.theme.SpendTrackerSpacing
 data class SettingsActions(
     val onRequestPermission: () -> Unit = {},
     val onOpenAppSettings: () -> Unit = {},
+    val onOpenNotificationAccess: () -> Unit = {},
+    val onRequestNotificationPermission: () -> Unit = {},
     val onCancelImport: () -> Unit = {},
     val onLeaveDemoData: () -> Unit = {},
     val onRequestDeleteAll: () -> Unit = {},
@@ -84,6 +86,7 @@ fun SettingsScreen(
 
         SectionHeading(stringResource(R.string.settings_access_section))
         SmsAccessCard(state, actions)
+        NotificationDetectionCard(state, actions)
         StatusCard(state)
         SectionHeading(stringResource(R.string.settings_rules_section))
         InfoCard(
@@ -117,6 +120,62 @@ fun SettingsScreen(
 
     if (state.settings.showDeleteConfirm) {
         DeleteConfirmDialog(state, actions)
+    }
+}
+
+@Composable
+private fun NotificationDetectionCard(state: AppUiState, actions: SettingsActions) {
+    val detectionEnabled = state.permission == PermissionUiState.GRANTED &&
+        state.settings.notificationAccessGranted
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column {
+            GroupedRow(
+                title = stringResource(R.string.notification_detection_title),
+                trailing = stringResource(
+                    if (detectionEnabled) {
+                        R.string.notification_detection_on
+                    } else {
+                        R.string.notification_detection_off
+                    },
+                ),
+                metadata = stringResource(R.string.notification_detection_summary),
+                showDivider = true,
+            )
+            Column(
+                modifier = Modifier.padding(SpendTrackerSpacing.CompactGroupPadding),
+                verticalArrangement = Arrangement.spacedBy(SpendTrackerSpacing.RelatedGap),
+            ) {
+                Text(
+                    stringResource(R.string.notification_detection_privacy),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = actions.onOpenNotificationAccess,
+                    modifier = Modifier.fillMaxWidth().testTag("notification_access"),
+                ) {
+                    Text(stringResource(
+                        if (state.settings.notificationAccessGranted) {
+                            R.string.action_manage_notification_access
+                        } else {
+                            R.string.action_enable_notification_access
+                        },
+                    ))
+                }
+                if (!state.settings.transactionNotificationsGranted) {
+                    Button(
+                        onClick = actions.onRequestNotificationPermission,
+                        modifier = Modifier.fillMaxWidth().testTag("transaction_notifications"),
+                    ) {
+                        Text(stringResource(R.string.action_enable_transaction_notifications))
+                    }
+                }
+            }
+        }
     }
 }
 

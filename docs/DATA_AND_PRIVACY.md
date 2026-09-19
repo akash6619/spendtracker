@@ -27,6 +27,13 @@ During import, hold one message body only long enough to parse and fingerprint
 it, then release it. Do not put message bodies in exceptions, analytics, crash
 reports, notifications, database columns, or normal debug logs.
 
+Immediate detection uses Android notification-listener access only as an opt-in
+wake-up signal. SpendTracker does not extract notification titles, bodies,
+message arrays, or sender content. A messaging event triggers a narrow SMS-provider
+read governed by the same ephemeral parse and fingerprint rules. SpendTracker's
+own alert contains only parsed amount, merchant, category, and inclusion facts
+and requests private lock-screen visibility.
+
 ## Referencing the original message
 
 For an Android SMS-backed transaction, persist:
@@ -110,8 +117,9 @@ only rows the user has not edited, and user-edited rows are never overwritten
 - Android backup: disabled for MVP, as currently declared in the manifest.
 - `Delete all SpendTracker data`: clears database, rules, fingerprints, import
   state, and locally held fingerprint key, then returns to onboarding.
-- Revoking SMS permission stops reads and live detection but does not silently
-  erase already parsed transactions. The UI offers a separate erase action.
+- Revoking SMS permission stops inbox reads and live detection; revoking
+  notification access stops background signals. Neither action silently erases
+  parsed transactions. The UI offers a separate erase action.
 
 ## Currency policy
 

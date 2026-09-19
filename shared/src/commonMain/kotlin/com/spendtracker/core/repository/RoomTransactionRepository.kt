@@ -37,10 +37,21 @@ class RoomTransactionRepository(
         dao.observeAll().map { rows -> rows.map(TransactionEntity::toDomain) }
 
     override suspend fun upsert(transactions: List<TransactionCandidate>) {
+        persist(transactions)
+    }
+
+    override suspend fun upsertAndGetInserted(
+        transactions: List<TransactionCandidate>,
+    ): List<LedgerTransaction> {
+        val insertedIds = persist(transactions)
+        return insertedIds.mapNotNull { dao.findById(it)?.toDomain() }
+    }
+
+    private suspend fun persist(transactions: List<TransactionCandidate>): List<String> {
         // One timestamp makes every row in the import batch internally consistent.
         val now = nowEpochMillis()
         val merchantRules = merchantRuleDao.getAll().associate { it.normalizedMerchant to SpendCategory.valueOf(it.category) }
-        dao.upsertAll(transactions.map { candidate ->
+        return dao.upsertAll(transactions.map { candidate ->
             val normalizedMerchant = merchantNormalizer.normalize(candidate.transaction.merchant)
             val normalizedCandidate = candidate.copy(
                 transaction = candidate.transaction.copy(merchant = normalizedMerchant),
@@ -55,6 +66,9 @@ class RoomTransactionRepository(
     }
 
     override suspend fun getById(id: String): LedgerTransaction? = dao.findById(id)?.toDomain()
+
+    override suspend fun getByFingerprint(sourceType: SourceType, fingerprint: String): LedgerTransaction? =
+        dao.findByFingerprint(sourceType.name, fingerprint)?.toDomain()
 
     override suspend fun updateTransaction(
         id: String,
