@@ -147,8 +147,13 @@ History and live messages must share the same pipeline:
 2. A source identity/fingerprint is computed before the body is discarded.
 3. Parser returns `Accepted`, `NeedsReview`, or `Rejected`; accepted/reviewable
    outcomes carry normalized fields and rejected outcomes carry only a safe reason.
-4. Categorizer and inclusion policy assign detected defaults.
-5. Repository performs an idempotent upsert in a transaction.
+4. Categorizer assigns category and, for recognized brand keywords, a stable
+   merchant identity. Generic category terms assign only category. Unknown,
+   generic, and fee merchants retain the normalized extracted value. Inclusion
+   policy assigns detected defaults.
+5. Repository performs an idempotent upsert in a transaction. Persisted merchant-
+   rule keys pass through the same canonical brand mapping, including compatibility
+   lookup for rules saved under older variant names.
 6. Existing user overrides are preserved during reparsing.
 7. Observed repository queries update the UI.
 

@@ -47,7 +47,7 @@ class FinancialMessageParserTest {
             assertTrue(parsed != null, case.body)
             assertEquals(case.kind, parsed.kind, case.body)
             assertEquals(case.included, parsed.includedInSpend, case.body)
-            assertEquals(6, parsed.parserVersion)
+            assertEquals(7, parsed.parserVersion)
         }
     }
 
@@ -129,7 +129,7 @@ class FinancialMessageParserTest {
         ).transactionOrNull()
         assertEquals("SWIGGY", parsed?.merchant)
         assertTrue(parsed?.reviewReasons?.none { it == TransactionReviewReason.MISSING_MERCHANT } == true)
-        assertTrue(parsed?.confidence == 0.90)
+        assertTrue(parsed.confidence == 0.90)
 
         // "on" followed by a date or possessive must not invent a merchant.
         val dated = parser.classify(

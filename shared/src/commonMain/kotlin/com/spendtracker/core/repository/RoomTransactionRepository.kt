@@ -1,6 +1,7 @@
 package com.spendtracker.core.repository
 
 import com.spendtracker.core.categorization.MerchantNormalizer
+import com.spendtracker.core.categorization.TransactionCategorizer
 import com.spendtracker.core.categorization.withMerchantCategory
 import com.spendtracker.core.database.MerchantCategoryRuleDao
 import com.spendtracker.core.database.MerchantCategoryRuleEntity
@@ -32,6 +33,7 @@ class RoomTransactionRepository(
     private val merchantRuleDao: MerchantCategoryRuleDao,
     private val nowEpochMillis: () -> Long,
     private val merchantNormalizer: MerchantNormalizer = MerchantNormalizer(),
+    private val categorizer: TransactionCategorizer = TransactionCategorizer(),
 ) : TransactionRepository {
     override fun observeTransactions(): Flow<List<LedgerTransaction>> =
         dao.observeAll().map { rows -> rows.map(TransactionEntity::toDomain) }
@@ -50,7 +52,8 @@ class RoomTransactionRepository(
     private suspend fun persist(transactions: List<TransactionCandidate>): List<String> {
         // One timestamp makes every row in the import batch internally consistent.
         val now = nowEpochMillis()
-        val merchantRules = merchantRuleDao.getAll().associate { it.normalizedMerchant to SpendCategory.valueOf(it.category) }
+        val merchantRules = canonicalizeRules(merchantRuleDao.getAll())
+            .associate { it.normalizedMerchant to SpendCategory.valueOf(it.category) }
         return dao.upsertAll(transactions.map { candidate ->
             val normalizedMerchant = merchantNormalizer.normalize(candidate.transaction.merchant)
             val normalizedCandidate = candidate.copy(
@@ -104,17 +107,26 @@ class RoomTransactionRepository(
     }
 
     override fun observeMerchantRules(): Flow<List<MerchantCategoryRule>> =
-        merchantRuleDao.observeAll().map { rules -> rules.map(MerchantCategoryRuleEntity::toDomain) }
+        merchantRuleDao.observeAll().map { rules ->
+            canonicalizeRules(rules).map(MerchantCategoryRuleEntity::toDomain)
+        }
 
     override suspend fun saveMerchantRule(merchant: String, category: SpendCategory) {
         val normalized = requireNotNull(merchantNormalizer.normalize(merchant)) {
             "Merchant must contain at least two letters or digits"
         }
+        val canonical = requireNotNull(categorizer.canonicalizeMerchant(normalized))
         val now = nowEpochMillis()
-        val existing = merchantRuleDao.find(normalized)
+        val matchingRules = merchantRuleDao.getAll().filter {
+            categorizer.canonicalizeMerchant(it.normalizedMerchant) == canonical
+        }
+        val existing = matchingRules.maxByOrNull(MerchantCategoryRuleEntity::updatedAtEpochMillis)
+        matchingRules.filterNot { it.normalizedMerchant == canonical }.forEach {
+            merchantRuleDao.delete(it.normalizedMerchant)
+        }
         merchantRuleDao.save(
             MerchantCategoryRuleEntity(
-                normalizedMerchant = normalized,
+                normalizedMerchant = canonical,
                 category = category.name,
                 createdAtEpochMillis = existing?.createdAtEpochMillis ?: now,
                 updatedAtEpochMillis = now,
@@ -123,12 +135,23 @@ class RoomTransactionRepository(
     }
 
     override suspend fun deleteMerchantRule(merchant: String) {
-        merchantNormalizer.normalize(merchant)?.let { merchantRuleDao.delete(it) }
+        val normalized = merchantNormalizer.normalize(merchant) ?: return
+        val canonical = categorizer.canonicalizeMerchant(normalized) ?: return
+        merchantRuleDao.getAll()
+            .filter { categorizer.canonicalizeMerchant(it.normalizedMerchant) == canonical }
+            .forEach { merchantRuleDao.delete(it.normalizedMerchant) }
     }
 
     override suspend fun count(): Int = dao.count()
 
     override suspend fun clear() = dao.deleteAll()
+
+    private fun canonicalizeRules(rules: List<MerchantCategoryRuleEntity>): List<MerchantCategoryRuleEntity> =
+        rules
+            .sortedBy(MerchantCategoryRuleEntity::updatedAtEpochMillis)
+            .associateBy { rule -> categorizer.canonicalizeMerchant(rule.normalizedMerchant) ?: rule.normalizedMerchant }
+            .map { (canonicalMerchant, rule) -> rule.copy(normalizedMerchant = canonicalMerchant) }
+            .sortedBy(MerchantCategoryRuleEntity::normalizedMerchant)
 }
 
 private fun TransactionCandidate.toEntity(now: Long): TransactionEntity = TransactionEntity(

@@ -43,6 +43,22 @@ class InMemoryTransactionRepositoryTest {
         assertEquals(0.9, transaction.confidence)
     }
 
+    @Test
+    fun merchantRuleUsesCanonicalBrandKey() = runTest {
+        val repository = InMemoryTransactionRepository()
+        repository.saveMerchantRule("SWIGGYPVTLTDFOOD1", SpendCategory.GROCERIES)
+
+        repository.upsert(
+            listOf(candidate(
+                merchant = "SWIGGY",
+                reviewReasons = emptySet(),
+            )),
+        )
+
+        assertEquals("SWIGGY", repository.observeMerchantRules().first().single().normalizedMerchant)
+        assertEquals(SpendCategory.GROCERIES, repository.observeTransactions().first().single().category)
+    }
+
     private fun candidate(
         merchant: String,
         reviewReasons: Set<TransactionReviewReason>,

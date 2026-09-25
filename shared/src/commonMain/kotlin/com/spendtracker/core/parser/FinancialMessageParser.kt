@@ -44,8 +44,10 @@ class FinancialMessageParser(
         val kind = detectKind(text)
         val directionResult = detectDirection(text, kind)
             ?: return ParseOutcome.Rejected(RejectionReason.MISSING_DIRECTION)
-        val merchant = merchantNormalizer.normalize(extractMerchant(text))
-        val category = categorizer.categorize(kind, merchant)
+        val extractedMerchant = merchantNormalizer.normalize(extractMerchant(text))
+        val categorization = categorizer.resolve(kind, extractedMerchant)
+        val merchant = categorization.merchant
+        val category = categorization.category
         val reviewReasons = buildSet {
             if (amountResult.conflicting) add(TransactionReviewReason.CONFLICTING_AMOUNTS)
             if (directionResult.conflicting) add(TransactionReviewReason.CONFLICTING_DIRECTIONS)

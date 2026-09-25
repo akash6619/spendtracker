@@ -49,6 +49,12 @@ transaction-override precedence, and effective category reporting queries.
 They also verify durable review-reason resolution, normalized matching in both
 repository implementations, and the version-1-to-version-3 migration chain.
 
+PAR-01D adds regression coverage proving different extracted strings containing
+the same merchant-brand keyword produce one canonical merchant. Generic category
+terms retain the full merchant while precedence, unknown merchants, fee merchants,
+and categories remain deterministic. Repository tests also prove legacy variant
+rule keys apply to canonical merchants and can be deleted through that identity.
+
 MVP-07 adds shared period-calculator tests for Monday-start weeks, calendar
 months, year and leap edges, Kolkata/UTC offsets, and a DST transition, plus
 aggregator tests for included-INR-only headlines, exact category-sum invariants,
