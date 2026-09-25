@@ -1,6 +1,6 @@
 # Current status
 
-- Last updated: 2026-09-19
+- Last updated: 2026-09-25
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
 - Next recommended work: UI-05 accessibility and visual release gate, then
@@ -17,6 +17,24 @@ Agents must claim work here before implementation and clear the row at handoff.
 | --- | --- | --- | --- | --- |
 
 ## Implemented now
+
+- PAR-01D gives recognized merchant-brand keywords a stable canonical identity.
+  When a normalized extracted merchant contains a known brand keyword, the
+  parser stores that brand as the merchant and uses it for the category.
+  Variants such as `SWIGGYPVTLTDFOOD1` and `PAY SWIGGY ORDER` therefore both
+  become `SWIGGY`. Rule order still gives `INSTAMART` precedence over `SWIGGY`.
+  Generic category terms such as `CAFE`, `RESTAURANT`, and `RETAIL` still assign
+  categories but retain the full normalized merchant. Unknown and fee merchants
+  also retain their normalized extracted value. Initial brand coverage now also
+  includes selected grocery, food, transport, shopping, health, travel, and
+  subscription businesses such as `JIOMART`, `DOMINOS`, `NAMMAYATRI`, `NYKAA`,
+  `APOLLO`, `CLEARTRIP`, and `YOUTUBE PREMIUM`.
+  Brand rules are evaluated before generic category terms, so values such as
+  `DOMINOS RESTAURANT` canonicalize to `DOMINOS`. Persisted user-approved
+  merchant rules are canonicalized on save, lookup, observation, and deletion;
+  legacy variant keys continue to override built-in categories.
+  Categorization version is 3 and parser output version is 7. Shared/JVM and
+  Android unit tests, Android lint, and debug assembly pass.
 
 - ENH-03 adds explicitly opt-in immediate background detection. Notifications
   from the current default SMS app, including silent notifications, are content-

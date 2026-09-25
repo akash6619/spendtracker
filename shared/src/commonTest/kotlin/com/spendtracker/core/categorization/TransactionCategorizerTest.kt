@@ -77,6 +77,60 @@ class TransactionCategorizerTest {
     }
 
     @Test
+    fun canonicalizesMerchantVariantsToMatchedKeyword() {
+        val variants = listOf("SWIGGY", "SWIGGYPVTLTDFOOD1", "PAY SWIGGY ORDER")
+
+        variants.forEach { merchant ->
+            val result = categorizer.resolve(TransactionKind.PURCHASE, normalizer.normalize(merchant))
+            assertEquals("SWIGGY", result.merchant, merchant)
+            assertEquals(SpendCategory.FOOD_AND_DINING, result.category, merchant)
+        }
+
+        val instamart = categorizer.resolve(
+            TransactionKind.PURCHASE,
+            normalizer.normalize("SWIGGYINSTAMARTGR"),
+        )
+        assertEquals("INSTAMART", instamart.merchant)
+        assertEquals(SpendCategory.GROCERIES, instamart.category)
+
+        val unknown = categorizer.resolve(TransactionKind.PURCHASE, normalizer.normalize("Northstar Unknown"))
+        assertEquals("NORTHSTAR UNKNOWN", unknown.merchant)
+        assertEquals(SpendCategory.OTHER, unknown.category)
+
+        val genericCafe = categorizer.resolve(TransactionKind.PURCHASE, normalizer.normalize("Northstar Cafe"))
+        assertEquals("NORTHSTAR CAFE", genericCafe.merchant)
+        assertEquals(SpendCategory.FOOD_AND_DINING, genericCafe.category)
+
+        val genericRetail = categorizer.resolve(TransactionKind.PURCHASE, normalizer.normalize("Ratnadeep Retail"))
+        assertEquals("RATNADEEP RETAIL", genericRetail.merchant)
+        assertEquals(SpendCategory.SHOPPING, genericRetail.category)
+
+        val fee = categorizer.resolve(TransactionKind.FEE, normalizer.normalize("Northstar Cafe"))
+        assertEquals("NORTHSTAR CAFE", fee.merchant)
+        assertEquals(SpendCategory.FEES_AND_CHARGES, fee.category)
+    }
+
+    @Test
+    fun canonicalizesExpandedMerchantBrands() {
+        val cases = listOf(
+            Triple("JioMart Online", "JIOMART", SpendCategory.GROCERIES),
+            Triple("Dominos Pizza", "DOMINOS", SpendCategory.FOOD_AND_DINING),
+            Triple("Dominos Restaurant", "DOMINOS", SpendCategory.FOOD_AND_DINING),
+            Triple("NammaYatri Ride", "NAMMAYATRI", SpendCategory.TRANSPORT),
+            Triple("Nykaa E Retail", "NYKAA", SpendCategory.SHOPPING),
+            Triple("Apollo Pharmacy", "APOLLO", SpendCategory.HEALTH),
+            Triple("Cleartrip Booking", "CLEARTRIP", SpendCategory.TRAVEL),
+            Triple("YouTube Premium", "YOUTUBE PREMIUM", SpendCategory.SUBSCRIPTIONS),
+        )
+
+        cases.forEach { (rawMerchant, canonicalMerchant, category) ->
+            val result = categorizer.resolve(TransactionKind.PURCHASE, normalizer.normalize(rawMerchant))
+            assertEquals(canonicalMerchant, result.merchant, rawMerchant)
+            assertEquals(category, result.category, rawMerchant)
+        }
+    }
+
+    @Test
     fun otherPurchaseIsReviewableWithoutBeingExcludedForCategoryUncertainty() {
         val outcome = assertIs<ParseOutcome.NeedsReview>(
             FinancialMessageParser().classify(

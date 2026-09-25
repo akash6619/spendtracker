@@ -36,6 +36,7 @@ slice begins.
 | PAR-01A | Amount roles and merchant boundaries | Complete | MVP-04, MVP-05 | Balance/limit amounts no longer obscure clear payments; merchant extraction skips instrument descriptions |
 | PAR-01B | Merchant identity refinement | Complete | PAR-01A | Card descriptions are skipped and concatenated Swiggy identities receive the intended category |
 | PAR-01C | Merchant substring categorization | Complete | PAR-01B | Embedded merchant keywords categorize deterministically with Instamart precedence |
+| PAR-01D | Canonical merchant identities | Complete | PAR-01C | Recognized merchant variants share a stable keyword-derived identity |
 | ENH-02 | Immediate transaction detail editing | Complete | MVP-06 | Users can edit merchants, categories, and spend inclusion without a separate save tap |
 | ENH-03 | Immediate notification ingestion | Complete (automated gates; physical-device/OEM validation pending) | MVP-08, MVP-06 | Opted-in users get newly parsed transactions immediately and can open their detail from an alert |
 

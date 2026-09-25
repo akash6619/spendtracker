@@ -1,6 +1,7 @@
 package com.spendtracker.core.repository
 
 import com.spendtracker.core.database.createSpendTrackerDatabase
+import com.spendtracker.core.database.MerchantCategoryRuleEntity
 import com.spendtracker.core.model.CurrencyCode
 import com.spendtracker.core.model.Money
 import com.spendtracker.core.model.ParsedTransaction
@@ -86,6 +87,33 @@ class RoomTransactionRepositoryTest {
         assertEquals(SpendCategory.TRAVEL, reopenedRepository.observeMerchantRules().first().single().category)
         reopened.close()
         file.delete()
+    }
+
+    @Test
+    fun legacyVariantMerchantRuleAppliesToCanonicalMerchantAndDeletesByCanonicalKey() = runTest {
+        withRepository { repository, database ->
+            database.merchantCategoryRuleDao().save(
+                MerchantCategoryRuleEntity(
+                    normalizedMerchant = "SWIGGYPVTLTDFOOD1",
+                    category = SpendCategory.GROCERIES.name,
+                    createdAtEpochMillis = 100,
+                    updatedAtEpochMillis = 100,
+                ),
+            )
+
+            repository.upsert(
+                listOf(candidate("1", "canonical-rule", parsed = parsed(
+                    merchant = "SWIGGY",
+                    category = SpendCategory.FOOD_AND_DINING,
+                ))),
+            )
+
+            assertEquals(SpendCategory.GROCERIES, repository.observeTransactions().first().single().category)
+            assertEquals("SWIGGY", repository.observeMerchantRules().first().single().normalizedMerchant)
+
+            repository.deleteMerchantRule("SWIGGY")
+            assertTrue(repository.observeMerchantRules().first().isEmpty())
+        }
     }
 
     @Test

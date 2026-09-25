@@ -386,3 +386,23 @@ entry that records the reason, migration impact, and affected tests.
 - Consequence: This supersedes D-020's deferral of live pickup while retaining
   foreground reconciliation as recovery. Live delivery depends on a messaging
   notification and provider timing, so physical OEM validation remains required.
+
+## D-026 — Canonicalize merchants from built-in category keywords
+
+- Date: 2026-09-25
+- Status: Accepted and validated
+- Decision: A recognized merchant-brand rule returns both its category and a
+  stable canonical merchant. The canonical merchant is the matched brand keyword.
+  Generic category terms such as `CAFE`, `RESTAURANT`, and `RETAIL` assign only
+  category and retain the full normalized extracted merchant. Ordered precedence
+  evaluates merchant brands before generic category terms and remains authoritative
+  among brands, including `INSTAMART` before `SWIGGY`. Unknown merchants and fee
+  transactions also retain their normalized extracted merchant. User-approved
+  merchant-rule keys use the same canonical identity; legacy variant keys are
+  canonicalized during lookup, observation, replacement, and deletion.
+- Reason: SMS templates add provider, legal, payment-handle, and order text around
+  the same merchant. Storing the full extracted variant fragments merchant history.
+- Consequence: New imports and reparsed untouched rows group recognized variants
+  under one identity. User-edited rows remain protected by D-019. Categorization
+  version advances to 3 and parser output version advances to 7. Future display
+  labels can map canonical keywords without changing source parsing.

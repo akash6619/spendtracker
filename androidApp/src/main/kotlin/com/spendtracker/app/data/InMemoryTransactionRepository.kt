@@ -1,6 +1,7 @@
 package com.spendtracker.app.data
 
 import com.spendtracker.core.categorization.MerchantNormalizer
+import com.spendtracker.core.categorization.TransactionCategorizer
 import com.spendtracker.core.categorization.withMerchantCategory
 import com.spendtracker.core.model.LedgerTransaction
 import com.spendtracker.core.model.MerchantCategoryRule
@@ -31,6 +32,7 @@ class InMemoryTransactionRepository(
     private val transactions = MutableStateFlow(deduplicate(initialTransactions.map(::toLedger)))
     private val merchantRules = MutableStateFlow<List<MerchantCategoryRule>>(emptyList())
     private val merchantNormalizer = MerchantNormalizer()
+    private val categorizer = TransactionCategorizer()
 
     override fun observeTransactions(): Flow<List<LedgerTransaction>> =
         transactions.asStateFlow()
@@ -114,15 +116,17 @@ class InMemoryTransactionRepository(
 
     override suspend fun saveMerchantRule(merchant: String, category: SpendCategory) {
         val normalized = requireNotNull(merchantNormalizer.normalize(merchant))
+        val canonical = requireNotNull(categorizer.canonicalizeMerchant(normalized))
         merchantRules.update { rules ->
-            (rules.filterNot { it.normalizedMerchant == normalized } + MerchantCategoryRule(normalized, category))
+            (rules.filterNot { it.normalizedMerchant == canonical } + MerchantCategoryRule(canonical, category))
                 .sortedBy { it.normalizedMerchant }
         }
     }
 
     override suspend fun deleteMerchantRule(merchant: String) {
         val normalized = merchantNormalizer.normalize(merchant) ?: return
-        merchantRules.update { rules -> rules.filterNot { it.normalizedMerchant == normalized } }
+        val canonical = categorizer.canonicalizeMerchant(normalized) ?: return
+        merchantRules.update { rules -> rules.filterNot { it.normalizedMerchant == canonical } }
     }
 
     override suspend fun count(): Int = transactions.value.size
