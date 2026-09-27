@@ -21,7 +21,8 @@ Agents must claim work here before implementation and clear the row at handoff.
 - CI-01 adds a GitHub Actions gate for every pull request and push to `main`.
   One Ubuntu/JDK 17 job runs shared JVM tests, Android debug unit tests, Android
   lint, and debug APK assembly. Concurrent obsolete runs on the same ref are
-  cancelled. The equivalent local Gradle gate passes.
+  cancelled. Successful runs publish the debug APK as a downloadable workflow
+  artifact retained for 14 days. The equivalent local Gradle gate passes.
 
 - PAR-01D gives recognized merchant-brand keywords a stable canonical identity.
   When a normalized extracted merchant contains a known brand keyword, the
