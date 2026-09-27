@@ -406,3 +406,27 @@ entry that records the reason, migration impact, and affected tests.
   under one identity. User-edited rows remain protected by D-019. Categorization
   version advances to 3 and parser output version advances to 7. Future display
   labels can map canonical keywords without changing source parsing.
+
+## D-027 — Daily summary uses stored facts and IST boundaries
+
+- Date: 2026-09-26
+- Status: Accepted and validated by automated gates
+- Decision: Chain one-time WorkManager jobs, recalculating the next 22:00
+  Asia/Kolkata wall-clock target after every successful run. Each request stores
+  its intended IST reporting date so delayed execution still reports the correct
+  day. With SMS permission, the worker first reconciles from that day's start
+  through the existing ephemeral parser and deduplicating repository. Headline
+  and category totals then come from one Room transaction. The notification
+  expands to category amounts with rounded percentage shares and uses a separate
+  private channel plus the existing notification-posting permission.
+- Reason: A durable OS-managed job survives process death and reboot without
+  exact-alarm permission. Stored parsed facts preserve the same aggregation and
+  privacy rules as the dashboard.
+- Consequence: Android battery optimization may defer delivery, but deferral does
+  not shift later wall-clock targets or change the intended reporting date. A
+  source failure retries instead of publishing a known-stale total. The
+  workflow skips reconciliation and notification until initial onboarding/import
+  completes or while SMS access is revoked, and it shares the local-reset mutex
+  so delete-all cannot be undone by a racing worker. The notification contains
+  no raw SMS, sender, account, or merchant data. Physical-device timing remains
+  part of the release gate.

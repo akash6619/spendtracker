@@ -84,6 +84,9 @@ Currently contains:
 - foreground reconciliation based on the last successful scan
 - opt-in notification-listener signaling, narrow recent-SMS ingestion, local
   transaction alerts, and transaction-detail pending-intent routing
+- self-rescheduling one-time WorkManager execution aligned to 22:00
+  Asia/Kolkata, with day reconciliation and a transactionally consistent Room
+  summary for the private expanded category notification
 - application-scoped Room repository for production data
 - Android Keystore-backed keyed source fingerprints
 - `SmsSourceLookup` resolving the persisted provider row ID into an ephemeral
