@@ -21,11 +21,12 @@ Agents must claim work here before implementation and clear the row at handoff.
 - CI-01 adds a GitHub Actions gate for every pull request and push to `main`.
   One Ubuntu/JDK 17 job runs shared JVM tests, Android debug unit tests, Android
   lint, and debug APK assembly. Concurrent obsolete runs on the same ref are
-  cancelled. Successful runs publish the debug APK as a downloadable workflow
-  artifact retained for 14 days. Successful `main` runs also replace the APK in
-  the `debug-latest` prerelease, providing a stable README download link while
-  keeping release-write permission out of pull-request jobs. The equivalent
-  local Gradle gate passes.
+  cancelled. Successful `main` runs restore a dedicated debug signing key from
+  the `CI_DEBUG_KEYSTORE_BASE64` repository secret, publish the APK as a
+  downloadable workflow artifact retained for 14 days, and replace the APK in
+  the `debug-latest` prerelease. This provides a stable README download link and
+  signing identity while keeping secrets and release-write permission out of
+  pull-request jobs. The equivalent local Gradle gate passes.
 
 - PAR-01D gives recognized merchant-brand keywords a stable canonical identity.
   When a normalized extracted merchant contains a known brand keyword, the
