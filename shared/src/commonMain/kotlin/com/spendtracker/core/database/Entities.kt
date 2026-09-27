@@ -105,3 +105,13 @@ data class PeriodTotal(
     val totalMinor: Long,
     val transactionCount: Int,
 )
+
+/**
+ * Consistent reporting snapshot for one explicit half-open period.
+ * The headline and category rows are read in one database transaction so
+ * concurrent ingestion cannot make their amounts disagree.
+ */
+data class SpendSummary(
+    val total: PeriodTotal,
+    val categories: List<CategoryTotal>,
+)

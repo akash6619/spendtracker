@@ -1,6 +1,6 @@
 # Current status
 
-- Last updated: 2026-09-25
+- Last updated: 2026-09-27
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
 - Next recommended work: UI-05 accessibility and visual release gate, then
@@ -17,6 +17,21 @@ Agents must claim work here before implementation and clear the row at handoff.
 | --- | --- | --- | --- | --- |
 
 ## Implemented now
+
+- ENH-04 chains one-time WorkManager summaries aligned to 22:00 Asia/Kolkata,
+  recalculating each target to avoid accumulated delay drift. A request retains
+  its intended IST date, reconciles that day through the existing ephemeral
+  SMS pipeline, and reads headline/category totals in one Room transaction. It
+  runs only after onboarding/import completes and shares the delete-all mutex,
+  preventing background reconciliation from repopulating a cleared database.
+  Revoked SMS access suppresses the summary instead of showing a stale total.
+  Its private notification shows the day's included INR total and record count;
+  expanding it shows every non-empty category's amount and rounded share. The
+  notification never includes raw SMS, sender, account, or merchant data. A
+  separate notification channel gives users direct
+  control. Shared/JVM, Android unit, connected notification, lint, and debug
+  assembly gates pass. API 37 visual verification confirms compact and expanded
+  rendering; physical-device battery-optimization timing remains pending.
 
 - CI-01 adds a GitHub Actions gate for every pull request and push to `main`.
   One Ubuntu/JDK 17 job runs shared JVM tests, Android debug unit tests, Android

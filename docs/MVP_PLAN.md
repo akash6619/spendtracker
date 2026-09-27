@@ -39,6 +39,7 @@ slice begins.
 | PAR-01D | Canonical merchant identities | Complete | PAR-01C | Recognized merchant variants share a stable keyword-derived identity |
 | ENH-02 | Immediate transaction detail editing | Complete | MVP-06 | Users can edit merchants, categories, and spend inclusion without a separate save tap |
 | ENH-03 | Immediate notification ingestion | Complete (automated gates; physical-device/OEM validation pending) | MVP-08, MVP-06 | Opted-in users get newly parsed transactions immediately and can open their detail from an alert |
+| ENH-04 | Daily spend notification | Complete (automated gates; physical-device timing validation pending) | MVP-07, ENH-03 | Users get a 22:00 IST daily total with expandable category distribution |
 
 ## PAR-01A — First deterministic parser refinement
 
@@ -688,6 +689,39 @@ financial SMS arrives, even while SpendTracker is closed.
       shared/JVM, Android unit, lint, and debug assembly gates pass.
 - [ ] Validate listener/provider timing and lock-screen behavior on a physical
       OEM device before release.
+
+---
+
+## ENH-04 — Daily spend notification
+
+**Status:** Complete (automated gates; physical-device timing validation pending)
+**Depends on:** MVP-07, ENH-03
+
+### Goal
+
+Show each day's included INR spend at 22:00 Asia/Kolkata, with category
+distribution available by expanding the private notification.
+
+### Delivered and acceptance gate
+
+- [x] One unique chain of one-time WorkManager requests recalculates the next
+      22:00 Asia/Kolkata target after each successful run, preventing drift.
+- [x] Each request retains its intended IST date and reconciles that day before
+      aggregating, so delayed execution neither changes the day nor knowingly reports stale data.
+- [x] Daily work checks completed onboarding and shares the local-reset mutex, so
+      delete-all cannot race with or be undone by background reconciliation.
+- [x] Revoked SMS access suppresses the summary instead of publishing a known-
+      incomplete daily total.
+- [x] Notification title shows included INR total and compact text shows record count.
+- [x] Expanded text lists every non-empty category with exact amount and rounded share.
+- [x] Headline and categories come from one consistent Room snapshot; raw SMS,
+      sender, account, and merchant data are absent from the notification.
+- [x] A separate user-controllable notification channel and existing Android 13+ posting grant apply.
+- [x] Unit tests cover same-day and next-day 22:00 scheduling; shared/JVM, Android unit,
+      lint, and debug assembly gates pass.
+- [x] API 37 connected test verifies Android accepts the posted summary; compact
+      and expanded notification rendering passes emulator visual inspection.
+- [ ] Validate delivery timing under physical-device battery optimization before release.
 
 ---
 

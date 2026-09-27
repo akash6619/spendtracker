@@ -143,6 +143,17 @@
     <string name="transaction_notification_detail">%1$s · %2$s</string>
     <string name="transaction_notification_included">Included in spend</string>
     <string name="transaction_notification_excluded">Excluded from spend</string>
+    <string name="daily_summary_channel">Daily spend summary</string>
+    <string name="daily_summary_channel_description">Daily included INR spend and category distribution at 10 PM IST</string>
+    <string name="daily_summary_title">Today’s spend: %1$s</string>
+    <string name="daily_summary_title_for_date">Spend for %1$s: %2$s</string>
+    <plurals name="daily_summary_count">
+        <item quantity="one">%d transaction</item>
+        <item quantity="other">%d transactions</item>
+    </plurals>
+    <string name="daily_summary_no_spend">No included INR spend today</string>
+    <string name="daily_summary_no_spend_for_date">No included INR spend on %1$s</string>
+    <string name="daily_summary_category">%1$s: %2$s (%3$d%%)</string>
     <string name="privacy_policy_title">Privacy</string>
     <string name="privacy_policy_body">SpendTracker runs fully offline: no login, no account, no analytics, no ads, and no internet permission. Financial SMS bodies are read only to parse a transaction and are never saved. Parsed records live only on this device. To stop scanning, revoke SMS access in system Settings; to remove stored data, use Delete all data above.</string>
     <plurals name="scan_progress_count">

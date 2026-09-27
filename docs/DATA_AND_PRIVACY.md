@@ -34,6 +34,13 @@ read governed by the same ephemeral parse and fingerprint rules. SpendTracker's
 own alert contains only parsed amount, merchant, category, and inclusion facts
 and requests private lock-screen visibility.
 
+The daily 22:00 Asia/Kolkata worker reconciles that day's SMS through the same
+ephemeral parser, keyed fingerprint, and deduplicating repository before reading
+one consistent stored-fact snapshot. Its notification exposes the included INR
+total, transaction count, category names, amounts, and rounded shares. It never
+includes raw SMS, sender, account, or merchant data and uses a private,
+separately controllable Android notification channel.
+
 ## Referencing the original message
 
 For an Android SMS-backed transaction, persist:

@@ -101,6 +101,13 @@ interface TransactionDao {
     """)
     suspend fun categoryTotals(fromInclusive: Long, toExclusive: Long): List<CategoryTotal>
 
+    /** Reads the headline and category distribution from one database snapshot. */
+    @Transaction
+    suspend fun spendSummary(fromInclusive: Long, toExclusive: Long): SpendSummary = SpendSummary(
+        total = periodTotal(fromInclusive, toExclusive),
+        categories = categoryTotals(fromInclusive, toExclusive),
+    )
+
     @Transaction
     suspend fun upsertAll(incoming: List<TransactionEntity>): List<String> {
         val insertedIds = mutableListOf<String>()
