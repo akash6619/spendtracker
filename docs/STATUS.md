@@ -22,7 +22,10 @@ Agents must claim work here before implementation and clear the row at handoff.
   One Ubuntu/JDK 17 job runs shared JVM tests, Android debug unit tests, Android
   lint, and debug APK assembly. Concurrent obsolete runs on the same ref are
   cancelled. Successful runs publish the debug APK as a downloadable workflow
-  artifact retained for 14 days. The equivalent local Gradle gate passes.
+  artifact retained for 14 days. Successful `main` runs also replace the APK in
+  the `debug-latest` prerelease, providing a stable README download link while
+  keeping release-write permission out of pull-request jobs. The equivalent
+  local Gradle gate passes.
 
 - PAR-01D gives recognized merchant-brand keywords a stable canonical identity.
   When a normalized extracted merchant contains a known brand keyword, the
