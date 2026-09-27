@@ -45,3 +45,46 @@ jobs:
           path: androidApp/build/outputs/apk/debug/androidApp-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+  publish-debug-apk:
+    name: Publish debug APK
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download debug APK
+        uses: actions/download-artifact@v4
+        with:
+          name: spendtracker-debug-apk
+          path: dist
+
+      - name: Use stable APK filename
+        run: mv dist/androidApp-debug.apk dist/spendtracker-debug.apk
+
+      - name: Publish rolling debug release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view debug-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/debug-latest" \
+              -f sha="$GITHUB_SHA" \
+              -F force=true
+            gh release upload debug-latest dist/spendtracker-debug.apk \
+              --clobber \
+              --repo "$GITHUB_REPOSITORY"
+            gh release edit debug-latest \
+              --prerelease \
+              --title "Latest debug build" \
+              --notes "Automated debug build from the latest successful main-branch CI run." \
+              --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create debug-latest dist/spendtracker-debug.apk \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "Latest debug build" \
+              --notes "Automated debug build from the latest successful main-branch CI run." \
+              --repo "$GITHUB_REPOSITORY"
+          fi

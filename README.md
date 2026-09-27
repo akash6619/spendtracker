@@ -5,6 +5,14 @@ financial transactions from SMS, categorizes them, and summarizes weekly and
 monthly spending. The MVP runs entirely on the phone: no login, backend, or
 network connection is required.
 
+## Download debug build
+
+[Download latest debug APK](https://github.com/akash6619/spendtracker/releases/download/debug-latest/spendtracker-debug.apk)
+
+This build is for testing only. Android may require permission to install apps
+from the browser or file manager used to open the APK. Private-repository access
+is required while this repository remains private.
+
 ## Project status
 
 The repository currently contains a working feasibility build:
