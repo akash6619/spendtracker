@@ -132,6 +132,9 @@ data class SettingsUiState(
     val isDeletingAll: Boolean = false,
     val deleteAllFailed: Boolean = false,
     val deleteAllSucceeded: Boolean = false,
+    val showReparseDialog: Boolean = false,
+    val reparseEarliestEpochMillis: Long = 0L,
+    val reparseLatestEpochMillis: Long = 0L,
 )
 
 /**

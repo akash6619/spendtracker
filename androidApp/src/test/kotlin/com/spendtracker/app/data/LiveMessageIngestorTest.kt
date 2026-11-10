@@ -16,6 +16,7 @@ class LiveMessageIngestorTest {
         val source = object : MessageSource {
             override suspend fun readMessagesSince(
                 cutoffEpochMillis: Long,
+                untilEpochMillis: Long,
                 consume: suspend (SourceMessage) -> Unit,
             ): Int {
                 listOf(

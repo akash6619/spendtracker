@@ -241,6 +241,7 @@ conclude “reject” or “defer”; adopting every approach is not the objecti
 | --- | --- | --- | --- | --- |
 | PAR-00 | Labelled corpus and current baseline | Ready | — | Frozen, broader multi-template corpus, documented splits/labels, metrics, ranked failure causes, predeclared comparison targets |
 | PAR-01A | Amount-role and merchant-boundary pilot | Complete | — | Focused synthetic baseline and regression-backed first rule improvements |
+| PAR-01E | Generalized merchant-span boundaries | Complete | — | Marker-prefixed issuers, descriptor `for`, apostrophes; synthetic regressions and versioned parser output |
 | PAR-01 | Contextual rules, issuer templates, and merchant aliases | Planned | PAR-00 | Common metrics versus frozen broader baseline; retain/reject decision |
 | PAR-02 | Gemini Nano feasibility and quality | Planned | PAR-01 | Compatible-phone status, synthetic extraction/category comparison, quotas/lifecycle/offline/manifest findings; defer if no device |
 | PAR-03 | Existing open model comparison | Planned | PAR-02 outcome | GLiNER and category baseline on computer; licence/label-fit audit; device trial only for a worthwhile candidate |
@@ -295,6 +296,34 @@ boundaries. Model device claims require physical-device measurements.
   not broad accuracy. PAR-00 remains ready to build a frozen multi-bank baseline;
   issuer routing and broader direction/status rules should be driven by it.
 
+### PAR-01E — Generalized merchant-span boundaries
+
+- Date/owner/status: 2026-11-10, `opencode`, complete.
+- Hypothesis: two issuer-agnostic span defects explain the observed card-SMS
+  merchant failures: marker characters around a descriptor, and `for` treated as
+  unconditional metadata. A third, narrower defect is that apostrophes abort the
+  span.
+- Dataset: the existing PAR-01A synthetic corpus (30 payments, 3 variants each;
+  12 rejected and 6 ambiguous safety cases) plus four new labelled payments:
+  marker-prefixed HDFC-shaped card messages with and without a descriptor `for`,
+  an apostrophe merchant, and `for` followed by a reward number. Fixtures remain
+  synthetic: card digits, phone numbers, and store names are invented.
+- Result: 34/34 payments and 54/54 safety cases complete across variants; new
+  focused tests pin `for INR 100`, `for ₹100`, and `for 100 points` as boundaries
+  while keeping `FOR M`/`FOR MEN` inside the descriptor.
+- Change: merchant anchors skip leading `.`/`_`/`-`, trim a trailing marker, and
+  allow apostrophes; `for` closes a span only when an amount follows. Extraction
+  remains body-only and deterministic.
+- Version/reliability: parser output advanced from 7 to 8. Untouched rows can
+  refresh on re-import; user-edited rows remain frozen under D-019. No schema,
+  UI, SMS-provider, permission, network, or background-work change.
+- Validation: shared JVM tests, Android unit tests, Android lint, and debug
+  assembly passed. Connected tests were not required for this shared-only slice.
+- Limitation/next step: descriptors containing other metadata words (`from`,
+  `was`, `current`) can still truncate, UPI VPA shapes still yield no merchant,
+  and apostrophes normalize to a space. Issuer templates were rejected for now;
+  the indicated direction is an LLM-based evaluation, which stays unscheduled.
+
 Copy this record for each later completed experiment:
 
 Copy this record for each completed experiment:
@@ -321,6 +350,10 @@ copy real-message prompts, model responses, or identifying device serial numbers
 - How should an adopted model's suggestions be confirmed or represented in UI?
 - Is transaction-time extraction or economic-event reconciliation worth a
   separate slice? Neither stored-time policy nor deduplication policy changes here.
+- Long-term merchant/field extraction: an LLM-based approach is currently
+  preferred over building issuer templates. It is not scheduled and needs an
+  offline/privacy/budget decision; deterministic rules remain the fallback until
+  then.
 
 ## Sources
 

@@ -17,15 +17,15 @@ import kotlinx.coroutines.withContext
  * mistaken for an empty inbox; no message bodies are retained or persisted.
  */
 class SmsInboxReader internal constructor(
-    private val queryInbox: (cutoffEpochMillis: Long) -> Cursor?,
+    private val queryInbox: (cutoffEpochMillis: Long, untilEpochMillis: Long) -> Cursor?,
 ) : MessageSource {
     constructor(context: Context) : this(
-        queryInbox = { cutoffEpochMillis ->
+        queryInbox = { cutoffEpochMillis, untilEpochMillis ->
             context.contentResolver.query(
                 Telephony.Sms.Inbox.CONTENT_URI,
                 PROJECTION,
-                "${Telephony.Sms.DATE} >= ?",
-                arrayOf(cutoffEpochMillis.toString()),
+                "${Telephony.Sms.DATE} >= ? AND ${Telephony.Sms.DATE} < ?",
+                arrayOf(cutoffEpochMillis.toString(), untilEpochMillis.toString()),
                 "${Telephony.Sms.DATE} ASC",
             )
         },
@@ -33,10 +33,11 @@ class SmsInboxReader internal constructor(
 
     override suspend fun readMessagesSince(
         cutoffEpochMillis: Long,
+        untilEpochMillis: Long,
         consume: suspend (SourceMessage) -> Unit,
     ): Int = withContext(Dispatchers.IO) {
         var scanned = 0
-        val cursor = checkNotNull(queryInbox(cutoffEpochMillis)) {
+        val cursor = checkNotNull(queryInbox(cutoffEpochMillis, untilEpochMillis)) {
             "SMS provider did not return a cursor"
         }
         cursor.use {

@@ -6,10 +6,13 @@ import com.spendtracker.core.model.SourceMessage
  * Platform boundary for reading source messages into shared import logic.
  * Implementations stream one message at a time from the requested cutoff and
  * return only an aggregate count, preventing raw inbox bodies from accumulating.
+ * [untilEpochMillis] bounds the read from above and defaults to unbounded so
+ * initial and reconciliation runs keep reading to the end of the inbox.
  */
 interface MessageSource {
     suspend fun readMessagesSince(
         cutoffEpochMillis: Long,
+        untilEpochMillis: Long = Long.MAX_VALUE,
         consume: suspend (SourceMessage) -> Unit,
     ): Int
 }

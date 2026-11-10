@@ -25,7 +25,7 @@ class FinancialMessageParserTest {
 
     @Test
     fun parserVersionIncludesCategorizationPolicyVersion() {
-        assertEquals(4 + TransactionCategorizer().version, parser.version)
+        assertEquals(5 + TransactionCategorizer().version, parser.version)
     }
 
     @Test
@@ -47,7 +47,7 @@ class FinancialMessageParserTest {
             assertTrue(parsed != null, case.body)
             assertEquals(case.kind, parsed.kind, case.body)
             assertEquals(case.included, parsed.includedInSpend, case.body)
-            assertEquals(7, parsed.parserVersion)
+            assertEquals(8, parsed.parserVersion)
         }
     }
 
@@ -150,6 +150,46 @@ class FinancialMessageParserTest {
         ).transactionOrNull()
 
         assertEquals("RATNADEEP RETAIL", parsed?.merchant)
+    }
+
+    @Test
+    fun extractsMerchantPastIssuerMarkersAndThroughDescriptorWords() {
+        // HDFC renders the store between "At" and "On <date>" with marker
+        // characters around it. Fixtures are synthetic copies of that shape.
+        val cases = listOf(
+            "Spent Rs.588 On HDFC Bank Card 1234 At ..NORTHSTAR BAKERY_ On 2026-11-10:18:23:25. Not You? To Block Call 18000000000" to "NORTHSTAR BAKERY",
+            "Spent Rs.14999 On HDFC Bank Card 1234 At ..ACME SPORTS_ On 2026-11-10:18:15:23. Not You? To Block Call 18000000000" to "ACME SPORTS",
+            "Spent Rs.450 On HDFC Bank Card 1234 At ..STYLE SALON FOR M_ On 2026-11-10:16:23:50. Not You? To Block Call 18000000000" to "STYLE SALON FOR M",
+            "Spent Rs.4999 On HDFC Bank Card 1234 At NORTHSTAR CLOTHING On 2026-11-10:17:49:33" to "NORTHSTAR CLOTHING",
+        )
+        cases.forEach { (body, merchant) ->
+            assertEquals(merchant, parser.classify(message(body)).transactionOrNull()?.merchant, body)
+        }
+    }
+
+    @Test
+    fun forClosesMerchantSpanOnlyWhenItIntroducesAnAmount() {
+        val amountFollows = listOf(
+            "INR 500 paid at NORTHSTAR for INR 100",
+            "INR 500 paid at NORTHSTAR for ₹100",
+            "INR 500 paid at NORTHSTAR for 100 points",
+        )
+        amountFollows.forEach { body ->
+            assertEquals("NORTHSTAR", parser.classify(message(body)).transactionOrNull()?.merchant, body)
+        }
+
+        assertEquals(
+            "STYLE SALON FOR MEN",
+            parser.classify(message("INR 500 paid at STYLE SALON FOR MEN")).transactionOrNull()?.merchant,
+        )
+    }
+
+    @Test
+    fun keepsApostrophesInsideMerchantSpans() {
+        assertEquals(
+            "MCDONALD S",
+            parser.classify(message("INR 500 spent at MCDONALD'S on 10-11-26")).transactionOrNull()?.merchant,
+        )
     }
 
     @Test

@@ -1,6 +1,6 @@
 # Current status
 
-- Last updated: 2026-09-27
+- Last updated: 2026-11-10
 - Current milestone: product enhancement work before release hardening; the app
   is not release-ready.
 - Next recommended work: UI-05 accessibility and visual release gate, then
@@ -42,6 +42,33 @@ Agents must claim work here before implementation and clear the row at handoff.
   the `debug-latest` prerelease. This provides a stable README download link and
   signing identity while keeping secrets and release-write permission out of
   pull-request jobs. The equivalent local Gradle gate passes.
+
+- ENH-06 adds an explicit-period re-parse from Settings. A clickable status row
+  opens a compact dialog with four calendar presets (current month, last month
+  onwards, current week, last week onwards), each previewing its resolved range
+  and clamped to the three-calendar-month import policy window; weeks start on
+  Monday. The new
+  `REPARSE` import mode re-reads that period with an upper bound, so the current
+  parser version refreshes stored transactions; untouched rows are re-derived,
+  user-edited rows stay frozen, genuine new rows do not raise transaction
+  alerts, and nothing is pruned when a message no longer parses. The reader now
+  bounds provider queries with `DATE >= ? AND DATE < ?`; initial and
+  reconciliation runs remain unbounded above. Shared/JVM and Android unit tests,
+  Android lint, debug assembly, and the full connected suite pass on the
+  `SpendTracker_API_37` emulator, which also confirmed the four HDFC-shaped
+  synthetic messages parse to `NORTHSTAR BAKERY`, `ACME SPORTS`,
+  `STYLE SALON FOR M`, and `NORTHSTAR CLOTHING` after a re-parse.
+
+- PAR-01E generalizes merchant-span boundaries for observed card SMS. Extraction
+  now skips issuer marker characters before a store name (HDFC renders
+  `At ..STORE_ On <date>`), keeps a trailing marker out of the value, and treats
+  `for` as a span boundary only when it introduces an amount, so descriptors such
+  as `STYLE SALON FOR M` survive while `for INR 100` still ends the span.
+  Apostrophes are allowed inside a span, so `MCDONALD'S` yields a merchant
+  instead of none. Parser output version is 8. Synthetic fixtures cover
+  marker-prefixed HDFC-shaped card messages, descriptor `for`, apostrophes, and
+  the amount-introducing `for` guard. Shared/JVM and Android unit tests, Android
+  lint, and debug assembly pass.
 
 - PAR-01D gives recognized merchant-brand keywords a stable canonical identity.
   When a normalized extracted merchant contains a known brand keyword, the
@@ -552,6 +579,9 @@ a decision:
    language coverage, and baseline-derived promotion targets remain unresolved;
    see [PARSER_RESEARCH.md](PARSER_RESEARCH.md). Stored-time, reconciliation, and
    model-adoption policy changes are not implied by the research roadmap.
+5. Long-term field extraction: prefer an LLM-based approach over building issuer
+   templates. Not scheduled; it needs an offline/privacy/budget decision and is
+   tracked as deferred research in [PARSER_RESEARCH.md](PARSER_RESEARCH.md).
 
 ## Handoff update checklist
 

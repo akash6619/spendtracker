@@ -17,10 +17,30 @@ enum class ImportFailureCode {
     SOURCE_OR_STORAGE_FAILURE,
 }
 
-/** Distinguishes the initial history load from a smaller overlap reconciliation. */
-enum class ImportMode {
-    INITIAL,
-    RECONCILIATION,
+/** Distinguishes the initial history load from overlap or explicit-period runs. */
+sealed interface ImportMode {
+    /** Reads the policy history window and marks the initial import complete. */
+    data object INITIAL : ImportMode
+
+    /** Reads from just before the last successful scan to catch missed messages. */
+    data object RECONCILIATION : ImportMode
+
+    /**
+     * Re-reads the inbox within an explicit epoch-millisecond period so the
+     * current parser version can refresh already imported rows. The coordinator
+     * clamps [fromEpochMillis] up to the policy window floor; user-edited rows
+     * remain untouched regardless of what a re-parse produces.
+     */
+    data class REPARSE(
+        val fromEpochMillis: Long,
+        val untilEpochMillis: Long,
+    ) : ImportMode {
+        init {
+            require(fromEpochMillis <= untilEpochMillis) {
+                "Reparse window must not start after it ends"
+            }
+        }
+    }
 }
 
 /**

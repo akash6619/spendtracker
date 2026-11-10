@@ -57,6 +57,7 @@ class ImportCoordinatorTest {
         val source = object : MessageSource {
             override suspend fun readMessagesSince(
                 cutoffEpochMillis: Long,
+                untilEpochMillis: Long,
                 consume: suspend (SourceMessage) -> Unit,
             ): Int {
                 consume(message("1"))
@@ -84,6 +85,7 @@ class ImportCoordinatorTest {
         val source = object : MessageSource {
             override suspend fun readMessagesSince(
                 cutoffEpochMillis: Long,
+                untilEpochMillis: Long,
                 consume: suspend (SourceMessage) -> Unit,
             ): Int {
                 consume(message("1"))
@@ -120,6 +122,68 @@ class ImportCoordinatorTest {
         coordinator.run(ImportMode.RECONCILIATION) {}
 
         assertEquals(18_000, source.lastCutoff)
+    }
+
+    @Test
+    fun reparseReadsExplicitWindowClampedUpToHistoryBoundary() = runTest {
+        val source = GeneratedMessageSource(1)
+        val coordinator = coordinator(
+            source = source,
+            transactions = RecordingTransactionRepository(),
+            states = FakeImportStateRepository(),
+            historyCutoff = 10_000,
+        )
+
+        coordinator.run(ImportMode.REPARSE(fromEpochMillis = 5_000, untilEpochMillis = 25_000)) {}
+
+        assertEquals(10_000, source.lastCutoff)
+        assertEquals(25_000, source.lastUntil)
+    }
+
+    @Test
+    fun reparseInsidePolicyWindowUsesRequestedBounds() = runTest {
+        val source = GeneratedMessageSource(1)
+        val coordinator = coordinator(
+            source = source,
+            transactions = RecordingTransactionRepository(),
+            states = FakeImportStateRepository(),
+            historyCutoff = 1_000,
+        )
+
+        coordinator.run(ImportMode.REPARSE(fromEpochMillis = 12_000, untilEpochMillis = 24_000)) {}
+
+        assertEquals(12_000, source.lastCutoff)
+        assertEquals(24_000, source.lastUntil)
+    }
+
+    @Test
+    fun reparseKeepsInitialImportCompleteAndInsertsNoNewRowsForUpdates() = runTest {
+        val source = GeneratedMessageSource(2)
+        val transactions = RecordingTransactionRepository()
+        val reported = mutableListOf<LedgerTransaction>()
+        val states = FakeImportStateRepository(
+            ImportState(
+                status = ImportRunStatus.COMPLETED,
+                initialImportComplete = true,
+                lastSuccessfulScanEpochMillis = 20_000,
+            ),
+        )
+        val coordinator = coordinator(
+            source = source,
+            transactions = transactions,
+            states = states,
+            onTransactionsInserted = { _, rows -> reported += rows },
+        )
+
+        coordinator.run(ImportMode.REPARSE(fromEpochMillis = 1_000, untilEpochMillis = 30_000)) {}
+        val firstRunCount = transactions.count()
+        coordinator.run(ImportMode.REPARSE(fromEpochMillis = 1_000, untilEpochMillis = 30_000)) {}
+
+        assertEquals(2, firstRunCount)
+        assertEquals(2, transactions.count())
+        assertTrue(reported.isNotEmpty())
+        assertEquals(firstRunCount, reported.size)
+        assertTrue(states.getImportState().initialImportComplete)
     }
 
     @Test
@@ -198,12 +262,15 @@ private class GeneratedMessageSource(
     private val rejectedEvery: Int? = null,
 ) : MessageSource {
     var lastCutoff: Long? = null
+    var lastUntil: Long? = null
 
     override suspend fun readMessagesSince(
         cutoffEpochMillis: Long,
+        untilEpochMillis: Long,
         consume: suspend (SourceMessage) -> Unit,
     ): Int {
         lastCutoff = cutoffEpochMillis
+        lastUntil = untilEpochMillis
         repeat(total) { index ->
             val rejected = rejectedEvery?.let { index % it == 0 } == true
             consume(

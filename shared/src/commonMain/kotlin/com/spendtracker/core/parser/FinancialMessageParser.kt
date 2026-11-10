@@ -180,7 +180,7 @@ class FinancialMessageParser(
         return MERCHANT.findAll(text)
             .mapNotNull { match ->
                 match.groups[1]?.value
-                    ?.trim(' ', '.', ',', '-')
+                    ?.trim(' ', '.', ',', '-', '_')
                     ?.takeIf { it.length >= 2 }
                     ?.take(MAX_MERCHANT_LENGTH)
             }
@@ -223,7 +223,7 @@ class FinancialMessageParser(
     private data class DirectionResult(val direction: TransactionDirection, val conflicting: Boolean)
 
     private companion object {
-        const val PARSER_BASE_VERSION = 4
+        const val PARSER_BASE_VERSION = 5
         const val MAX_MERCHANT_LENGTH = 80
 
         val AMOUNT_TOKEN = Regex("(?i)(?<![A-Z0-9])(INR|Rs\\.?|₹|USD|\\$|EUR|€|GBP|£|JPY|¥|AUD|CAD)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)")
@@ -236,8 +236,12 @@ class FinancialMessageParser(
             """(?i)^\s*(?:(?:was|is|has\s+been)\s+)?(?:debited|credited|spent|paid|withdrawn|charged|received|refunded|reversed|transferred)\b""",
         )
         val ACCOUNT_HINT = Regex("(?i)(?:a/?c|account|card)(?:\\s+(?:no\\.?|number|ending|xx|x))*[\\s:*#-]*[xX*.-]*([0-9]{3,6})")
+        // Issuer descriptors can prefix the store name with marker characters
+        // (HDFC renders "... At ..STORE_ On <date>"), so those are skipped
+        // before the name starts. "for" only closes a span when it introduces an
+        // amount: genuine descriptors such as "STYLE SALON FOR MEN" contain it.
         val MERCHANT = Regex(
-            """(?i)(?:\bat\b|\bto\b|\bon\b|info:)\s+(?!\d|your\b|my\b|the\b|this\b|(?:credit\s+|debit\s+)?card\b|account\b|a/?c\b)([A-Z0-9][A-Z0-9 &@._/-]*?)(?=\s+(?:at|on|using|via|ref|reference|avl|avail|available|current|closing|account|credit\s+limit|from|for|was)\b|[.,;]|$)""",
+            """(?i)(?:\bat\b|\bto\b|\bon\b|info:)\s+[._-]*(?!\d|your\b|my\b|the\b|this\b|(?:credit\s+|debit\s+)?card\b|account\b|a/?c\b)([A-Z0-9][A-Z0-9 &@._/'-]*?)(?=\s+(?:(?:at|on|using|via|ref|reference|avl|avail|available|current|closing|account|credit\s+limit|from|was)\b|for\s+(?=(?:INR|RS\.?|₹|USD|\$|EUR|€|GBP|£|JPY|¥)?\s*[0-9]))|[.,;]|$)""",
         )
         val PAYMENT_INSTRUMENT_MERCHANT = Regex(
             """(?i)\b(?:(?:credit|debit|bank)\s+)?card\b|\b(?:account|a/?c)\b""",

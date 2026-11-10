@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.spendtracker.app.ui.settings.SettingsActions
 import com.spendtracker.app.ui.theme.SpendTrackerTheme
 import org.junit.Rule
 import org.junit.Test
@@ -124,5 +125,63 @@ class SpendTrackerAppTest {
 
         composeRule.onNodeWithText("42 messages inspected").assertIsDisplayed()
         composeRule.onNodeWithTag(UiTestTags.CANCEL_IMPORT).assertIsDisplayed()
+    }
+
+    @Test
+    fun settingsReparseOpensDialogAndPresetConfirmsARange() {
+        val latest = 1_788_825_600_000L
+        val earliest = latest - 90 * 86_400_000L
+        composeRule.setContent {
+            var state by remember {
+                mutableStateOf(
+                    AppUiState(
+                        stage = AppStage.MAIN,
+                        permission = PermissionUiState.GRANTED,
+                        settings = SettingsUiState(
+                            parserVersion = 8,
+                            storedTransactionCount = 3,
+                            lastScanEpochMillis = latest,
+                        ),
+                    ),
+                )
+            }
+            SpendTrackerTheme {
+                SpendTrackerAppContent(
+                    state = state,
+                    onRequestSmsPermission = {},
+                    onScanMessages = {},
+                    onUseDemoData = {},
+                    onLeaveDemoData = {},
+                    onDestinationSelected = { destination ->
+                        state = state.copy(selectedDestination = destination)
+                    },
+                    settingsActions = SettingsActions(
+                        onRequestReparse = {
+                            state = state.copy(
+                                settings = state.settings.copy(
+                                    showReparseDialog = true,
+                                    reparseEarliestEpochMillis = earliest,
+                                    reparseLatestEpochMillis = latest,
+                                ),
+                            )
+                        },
+                        onCancelReparse = {
+                            state = state.copy(
+                                settings = state.settings.copy(showReparseDialog = false),
+                            )
+                        },
+                    ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(UiTestTags.NAV_SETTINGS).performClick()
+        composeRule.onNodeWithTag(UiTestTags.REPARSE_ROW).performClick()
+        composeRule.onNodeWithTag(UiTestTags.REPARSE_DIALOG).assertIsDisplayed()
+        composeRule.onNodeWithText("Last month onwards").assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.REPARSE_PERIOD_LAST_WEEK).performClick()
+        composeRule.onNodeWithTag(UiTestTags.REPARSE_CONFIRM).assertIsDisplayed()
+        composeRule.onNodeWithTag(UiTestTags.REPARSE_CANCEL).performClick()
+        composeRule.onNodeWithTag(UiTestTags.REPARSE_DIALOG).assertDoesNotExist()
     }
 }

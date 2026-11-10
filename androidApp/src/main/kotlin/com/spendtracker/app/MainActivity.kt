@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.spendtracker.app.data.CalendarHistoryCutoffProvider
 import com.spendtracker.app.data.FinancialNotificationListenerService
 import com.spendtracker.app.data.LiveTransactionNotifier
 import com.spendtracker.app.di.BuildVariantDependencies
@@ -34,6 +35,8 @@ class MainActivity : ComponentActivity() {
     private val dependencies: SpendTrackerApplication
         get() = application as SpendTrackerApplication
 
+    private val historyCutoffProvider = CalendarHistoryCutoffProvider()
+
     private val appViewModel by viewModels<AppViewModel> {
         AppViewModel.Factory(
             primaryRepository = dependencies.repository,
@@ -41,6 +44,7 @@ class MainActivity : ComponentActivity() {
             demoRepository = BuildVariantDependencies.createDemoRepository(),
             importRunner = dependencies.importCoordinator,
             initialPermissionGranted = hasSmsPermission(),
+            historyCutoffEpochMillis = historyCutoffProvider::cutoffEpochMillis,
             sourceMessageLookup = dependencies.sourceLookup,
             deleteAllLocalData = { dependencies.deleteAllLocalData() },
         )

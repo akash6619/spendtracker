@@ -430,3 +430,51 @@ entry that records the reason, migration impact, and affected tests.
   so delete-all cannot be undone by a racing worker. The notification contains
   no raw SMS, sender, account, or merchant data. Physical-device timing remains
   part of the release gate.
+
+## D-028 — Merchant spans ignore issuer markers and contextual "for"
+
+- Date: 2026-11-10
+- Status: Accepted and validated by automated gates
+- Decision: Merchant extraction skips leading `.`, `_`, and `-` marker characters
+  after a merchant anchor, trims a trailing marker, and allows apostrophes inside
+  a span. The word `for` ends a span only when an amount (optionally
+  currency-prefixed) follows it; otherwise it stays part of the descriptor.
+  Extraction remains body-only: no sender routing, issuer templates, or stored
+  raw text is introduced.
+- Reason: HDFC renders card descriptors as `At ..NAME_ On <date>`, which no
+  anchor could match because a captured value had to start with a letter or
+  digit, so the merchant was dropped entirely. Real descriptors also contain
+  `for` (`STYLE SALON FOR M`), and treating it as unconditional metadata
+  truncated the name.
+- Consequence: Parser output version advances from 7 to 8. Untouched rows can
+  refresh on re-import; user-edited rows remain frozen under D-019. A descriptor
+  that reads `for <number> <word>` (for example a reward phrase) still ends at
+  `for`, so widening it requires a later decision. Apostrophes survive extraction
+  but normalize to a space (`MCDONALD'S` becomes `MCDONALD S`); brand rules
+  without apostrophes still apply. Issuer templates were considered for this
+  gap and rejected for now in favor of a future LLM-based evaluation, which
+  remains unscheduled (see `STATUS.md` open questions). No schema, UI,
+  SMS-provider, permission, network, or background-work change.
+
+## D-029 — Explicit-period re-parse from settings
+
+- Date: 2026-11-10
+- Status: Accepted and validated by automated gates and emulator run
+- Decision: A new `ImportMode.REPARSE(from, until)` re-reads an explicitly chosen
+  period from the SMS provider with an upper bound, so the current parser can
+  refresh already imported rows. Settings offers four calendar presets (current
+  month, last month onwards, current week, last week onwards) that each run until
+  now, preview their resolved range, and are clamped to the import policy window.
+  Weeks start on Monday. The coordinator clamps the requested start up to the
+  policy cutoff; the ViewModel clamps the end to "now" and ignores impossible
+  windows.
+- Reason: Parser upgrades changed stored fields, but nothing re-read earlier
+  messages; reconciliation only ever scans from the last successful run.
+- Consequence: Re-parsing refreshes untouched rows and keeps user-edited rows
+  frozen under D-019; it inserts genuinely new rows without raising transaction
+  alerts (alerts stay limited to reconciliation). Rejected messages produce no
+  candidate, so rows the new parser no longer accepts are not pruned; that would
+  be a separate deletion decision. The read window cannot precede the three
+  calendar months already governed by the import policy, so no privacy posture
+  change is implied. Import state records the run and updates the shown parser
+  version. No schema, permission, network, or background-work change.

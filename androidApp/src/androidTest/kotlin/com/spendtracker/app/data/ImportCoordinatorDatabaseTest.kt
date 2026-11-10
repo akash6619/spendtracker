@@ -29,7 +29,7 @@ import org.junit.runner.RunWith
 class ImportCoordinatorDatabaseTest {
     @Test
     fun unavailableProviderCursorFailsInsteadOfReportingEmptyInbox() {
-        val reader = SmsInboxReader { null }
+        val reader = SmsInboxReader { _, _ -> null }
 
         assertThrows(IllegalStateException::class.java) {
             runBlocking { reader.readMessagesSince(1_000) {} }
@@ -51,6 +51,7 @@ class ImportCoordinatorDatabaseTest {
             val source = object : MessageSource {
                 override suspend fun readMessagesSince(
                     cutoffEpochMillis: Long,
+                    untilEpochMillis: Long,
                     consume: suspend (SourceMessage) -> Unit,
                 ): Int {
                     consume(message("1", "INR 250.00 debited at Northstar Cafe"))
