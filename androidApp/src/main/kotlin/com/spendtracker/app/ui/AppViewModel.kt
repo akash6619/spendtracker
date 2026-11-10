@@ -53,6 +53,7 @@ class AppViewModel(
     initialPermissionGranted: Boolean,
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
     private val timeZone: () -> TimeZone = { TimeZone.of(ZoneId.systemDefault().id) },
+    private val historyCutoffEpochMillis: () -> Long = { 0L },
     private val sourceMessageLookup: SourceMessageLookup? = null,
     private val deleteAllLocalData: suspend () -> Unit = {},
 ) : ViewModel() {
@@ -338,6 +339,39 @@ class AppViewModel(
 
     fun onCancelDeleteAll() {
         _uiState.update { it.copy(settings = it.settings.copy(showDeleteConfirm = false)) }
+    }
+
+    /**
+     * Opens the re-parse dialog only for a completed real (non-demo) import,
+     * carrying the policy window bounds the picker may select within.
+     */
+    fun onRequestReparse() {
+        val state = _uiState.value
+        if (state.usingDemoData || !durableImportState.initialImportComplete || state.isScanning) return
+        _uiState.update { it.copy(settings = it.settings.copy(
+            showReparseDialog = true,
+            reparseEarliestEpochMillis = historyCutoffEpochMillis(),
+            reparseLatestEpochMillis = nowEpochMillis(),
+        )) }
+    }
+
+    fun onCancelReparse() {
+        _uiState.update { it.copy(settings = it.settings.copy(showReparseDialog = false)) }
+    }
+
+    /**
+     * Starts a re-parse of the chosen period. Bounds are clamped defensively to
+     * the policy window and to "now"; an impossible window simply closes the
+     * dialog without scanning. Untouched rows refresh while user-edited rows
+     * remain frozen, so confirming never erases user work.
+     */
+    fun onConfirmReparse(fromEpochMillis: Long, untilEpochMillis: Long) {
+        val settings = _uiState.value.settings
+        _uiState.update { it.copy(settings = it.settings.copy(showReparseDialog = false)) }
+        val from = maxOf(fromEpochMillis, settings.reparseEarliestEpochMillis)
+        val until = minOf(untilEpochMillis, settings.reparseLatestEpochMillis)
+        if (from > until) return
+        runImport(ImportMode.REPARSE(from, until))
     }
 
     fun onConfirmDeleteAll() {
@@ -636,6 +670,7 @@ class AppViewModel(
         private val demoRepository: TransactionRepository?,
         private val importRunner: ImportRunner,
         private val initialPermissionGranted: Boolean,
+        private val historyCutoffEpochMillis: () -> Long,
         private val sourceMessageLookup: SourceMessageLookup,
         private val deleteAllLocalData: suspend () -> Unit,
     ) : ViewModelProvider.Factory {
@@ -650,6 +685,7 @@ class AppViewModel(
                 demoRepository = demoRepository,
                 importRunner = importRunner,
                 initialPermissionGranted = initialPermissionGranted,
+                historyCutoffEpochMillis = historyCutoffEpochMillis,
                 sourceMessageLookup = sourceMessageLookup,
                 deleteAllLocalData = deleteAllLocalData,
             ) as T

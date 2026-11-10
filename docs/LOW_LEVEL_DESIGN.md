@@ -226,9 +226,11 @@ denial, permanent denial, and permission revoked after a completed import.
 ### 6.2 Inbox reader
 
 `SmsInboxReader` implements the shared `MessageSource` interface. It receives an
-explicit cutoff, queries `Telephony.Sms.Inbox.CONTENT_URI`, and asks only for ID,
-address, body, and date. `CalendarHistoryCutoffProvider` calculates the initial
-`now - 3 calendar months` boundary with an injectable clock and time zone.
+explicit lower cutoff and an upper bound, queries `Telephony.Sms.Inbox.CONTENT_URI`
+with `DATE >= ? AND DATE < ?`, and asks only for ID, address, body, and date.
+`CalendarHistoryCutoffProvider` calculates the initial `now - 3 calendar months`
+boundary with an injectable clock and time zone. Initial and reconciliation runs
+pass an unbounded upper limit; a re-parse passes the chosen period end.
 
 The query runs in `withContext(Dispatchers.IO)` so blocking provider work does
 not freeze the main UI thread. A `Cursor` is consumed one row at a time. Each
@@ -251,7 +253,10 @@ explicit `Accepted`, `NeedsReview`, or `Rejected` outcome. For each message it:
 8. assigns confidence, review/rejection reasons, and parser version.
 
 Accepted and reviewable outcomes carry a `ParsedTransaction`; rejected outcomes
-carry only a coarse, privacy-safe reason. The compatibility `parse` helper maps
+carry only a coarse, privacy-safe reason. Merchant spans skip issuer marker
+characters and treat `for` as a boundary only when an amount follows, so
+descriptors such as `STYLE SALON FOR M` keep the full name while `for INR 100`
+ends the span. The compatibility `parse` helper maps
 rejection to `null`, but the importer uses the explicit outcome. Conflicting
 amounts/directions, unknown kinds, and purchase messages without merchants are
 persisted as reviewable; conflicting monetary facts default to excluded from
@@ -290,11 +295,14 @@ local deletion first clears stored rows and then deletes this key.
 joins the message source, parser, fingerprinter, transaction repository, import-
 state repository, cutoff provider, and clock.
 
-It supports two modes:
+It supports three modes:
 
 - `INITIAL` starts at the three-calendar-month cutoff;
 - `RECONCILIATION` starts at the later of that cutoff or five minutes before
-  the previous successful scan, so a small overlap catches boundary races.
+  the previous successful scan, so a small overlap catches boundary races;
+- `REPARSE(from, until)` re-reads an explicit period with an upper bound, so an
+  upgraded parser can refresh already imported rows. Its start is clamped up to
+  the policy cutoff; user-edited rows stay frozen regardless of the re-parse.
 
 It changes durable status to `RUNNING`, processes one source message at a time,
 and flushes accepted candidates in batches of 100. It reports only safe counts:

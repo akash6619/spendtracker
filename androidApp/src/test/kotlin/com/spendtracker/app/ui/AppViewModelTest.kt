@@ -55,6 +55,10 @@ class AppViewModelTest {
     // Wednesday 2026-09-09, inside the UTC week starting Monday 2026-09-07.
     private val fixedNow: Long = Instant.parse("2026-09-09T12:00:00Z").toEpochMilli()
 
+    private companion object {
+        const val DAY_MILLIS: Long = 86_400_000L
+    }
+
     @Test
     fun notificationTapOpensMatchingTransactionDetailWhenLedgerLoads() = runTest {
         val repository = InMemoryTransactionRepository(listOf(transaction("notified")))
@@ -202,8 +206,96 @@ class AppViewModelTest {
         assertEquals(12, state.scanSummary?.scannedMessages)
         assertEquals(1, state.scanSummary?.savedTransactions)
         assertEquals(685_00, state.dashboard.report?.includedInrTotalMinor)
-        assertEquals(listOf(ImportMode.INITIAL), requestedModes)
+        assertEquals(listOf<ImportMode>(ImportMode.INITIAL), requestedModes)
         assertFalse(state.isScanning)
+    }
+
+    @Test
+    fun requestReparseShowsPolicyWindowAndConfirmRunsReparseMode() = runTest {
+        val repository = InMemoryTransactionRepository()
+        val stateRepository = FakeImportStateRepository(
+            ImportState(status = ImportRunStatus.COMPLETED, initialImportComplete = true),
+        )
+        val requested = mutableListOf<ImportMode>()
+        val runner = ImportRunner { mode, _ ->
+            requested += mode
+            ImportState(
+                status = ImportRunStatus.COMPLETED,
+                initialImportComplete = true,
+                lastSuccessfulScanEpochMillis = fixedNow,
+            ).also { stateRepository.saveImportState(it) }
+        }
+        val viewModel = AppViewModel(
+            primaryRepository = repository,
+            importStateRepository = stateRepository,
+            demoRepository = null,
+            importRunner = runner,
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            historyCutoffEpochMillis = { fixedNow - 30 * DAY_MILLIS },
+        )
+        advanceUntilIdle()
+
+        viewModel.onRequestReparse()
+        val dialogState = viewModel.uiState.value.settings
+        assertTrue(dialogState.showReparseDialog)
+        assertEquals(fixedNow - 30 * DAY_MILLIS, dialogState.reparseEarliestEpochMillis)
+        assertEquals(fixedNow, dialogState.reparseLatestEpochMillis)
+
+        viewModel.onCancelReparse()
+        assertFalse(viewModel.uiState.value.settings.showReparseDialog)
+
+        viewModel.onRequestReparse()
+        viewModel.onConfirmReparse(fixedNow - 10 * DAY_MILLIS, fixedNow)
+        advanceUntilIdle()
+
+        assertEquals(listOf<ImportMode>(ImportMode.REPARSE(fixedNow - 10 * DAY_MILLIS, fixedNow)), requested)
+        assertFalse(viewModel.uiState.value.settings.showReparseDialog)
+        assertFalse(viewModel.uiState.value.isScanning)
+    }
+
+    @Test
+    fun confirmReparseClampsBoundsToPolicyWindowAndSkipsImpossibleRanges() = runTest {
+        val repository = InMemoryTransactionRepository()
+        val stateRepository = FakeImportStateRepository(
+            ImportState(status = ImportRunStatus.COMPLETED, initialImportComplete = true),
+        )
+        val requested = mutableListOf<ImportMode>()
+        val runner = ImportRunner { mode, _ ->
+            requested += mode
+            ImportState(
+                status = ImportRunStatus.COMPLETED,
+                initialImportComplete = true,
+                lastSuccessfulScanEpochMillis = fixedNow,
+            ).also { stateRepository.saveImportState(it) }
+        }
+        val earliest = fixedNow - 30 * DAY_MILLIS
+        val viewModel = AppViewModel(
+            primaryRepository = repository,
+            importStateRepository = stateRepository,
+            demoRepository = null,
+            importRunner = runner,
+            initialPermissionGranted = true,
+            nowEpochMillis = { fixedNow },
+            timeZone = { TimeZone.UTC },
+            historyCutoffEpochMillis = { earliest },
+        )
+        advanceUntilIdle()
+
+        viewModel.onRequestReparse()
+        // A window starting before the policy floor is clamped, and an end
+        // beyond "now" is clamped too.
+        viewModel.onConfirmReparse(earliest - 10 * DAY_MILLIS, fixedNow + 10 * DAY_MILLIS)
+        advanceUntilIdle()
+        assertEquals(listOf<ImportMode>(ImportMode.REPARSE(earliest, fixedNow)), requested)
+
+        // An impossible window closes the dialog without scanning again.
+        viewModel.onRequestReparse()
+        viewModel.onConfirmReparse(fixedNow, fixedNow - 1)
+        advanceUntilIdle()
+        assertEquals(1, requested.size)
+        assertFalse(viewModel.uiState.value.settings.showReparseDialog)
     }
 
     @Test
@@ -732,7 +824,7 @@ class AppViewModelTest {
         vm.onPermissionResult(granted = true, shouldShowRationale = false)
         advanceUntilIdle()
 
-        assertEquals(listOf(ImportMode.INITIAL), requestedModes)
+        assertEquals(listOf<ImportMode>(ImportMode.INITIAL), requestedModes)
         assertEquals(AppStage.MAIN, vm.uiState.value.stage)
     }
 

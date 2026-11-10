@@ -65,14 +65,18 @@ class ImportCoordinator(
         }
 
         try {
-            val cutoff = when (mode) {
-                ImportMode.INITIAL -> historyCutoffProvider.cutoffEpochMillis()
+            val (cutoff, until) = when (mode) {
+                ImportMode.INITIAL -> historyCutoffProvider.cutoffEpochMillis() to Long.MAX_VALUE
                 ImportMode.RECONCILIATION -> maxOf(
                     historyCutoffProvider.cutoffEpochMillis(),
                     (previous.lastSuccessfulScanEpochMillis ?: attemptAt) - reconciliationOverlapMillis,
-                )
+                ) to Long.MAX_VALUE
+                is ImportMode.REPARSE -> maxOf(
+                    mode.fromEpochMillis,
+                    historyCutoffProvider.cutoffEpochMillis(),
+                ) to mode.untilEpochMillis
             }
-            messageSource.readMessagesSince(cutoff) { message ->
+            messageSource.readMessagesSince(cutoff, until) { message ->
                 val outcome = parser.classify(message)
                 val parsed = when (outcome) {
                     is ParseOutcome.Accepted -> outcome.transaction

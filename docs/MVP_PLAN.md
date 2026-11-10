@@ -37,9 +37,11 @@ slice begins.
 | PAR-01B | Merchant identity refinement | Complete | PAR-01A | Card descriptions are skipped and concatenated Swiggy identities receive the intended category |
 | PAR-01C | Merchant substring categorization | Complete | PAR-01B | Embedded merchant keywords categorize deterministically with Instamart precedence |
 | PAR-01D | Canonical merchant identities | Complete | PAR-01C | Recognized merchant variants share a stable keyword-derived identity |
+| PAR-01E | Generalized merchant-span boundaries | Complete | — | Marker-prefixed descriptors and descriptor `for` words no longer hide or truncate card merchants |
 | ENH-02 | Immediate transaction detail editing | Complete | MVP-06 | Users can edit merchants, categories, and spend inclusion without a separate save tap |
 | ENH-03 | Immediate notification ingestion | Complete (automated gates; physical-device/OEM validation pending) | MVP-08, MVP-06 | Opted-in users get newly parsed transactions immediately and can open their detail from an alert |
 | ENH-04 | Daily spend notification | Complete (automated gates; physical-device timing validation pending) | MVP-07, ENH-03 | Users get a 22:00 IST daily total with expandable category distribution |
+| ENH-06 | Period re-parse from settings | Complete | MVP-08 | Users re-read a chosen SMS period so the current parser refreshes stored transactions |
 
 ## PAR-01A — First deterministic parser refinement
 
@@ -78,6 +80,74 @@ multi-bank evaluation. No private source data or external-app export is required
 Issuer-specific routing, semantic direction/status rewrites, category expansion,
 ML, new stored fields, source export, and private-device inspection remain outside
 this first slice. Record bank/template priorities when the user supplies them.
+
+## PAR-01E — Generalized merchant-span boundaries
+
+**Status:** Complete
+
+User-assigned follow-up to observed HDFC card-spend failures: an issuer marker
+prefix (`At ..STORE_ On <date>`) prevented merchant extraction entirely, and a
+descriptor containing `for` was truncated. This stays deterministic and
+body-only. Issuer templates were considered and rejected for now in favor of a
+future LLM-based evaluation, recorded as an open question.
+
+### Acceptance criteria
+
+- [x] Merchant extraction skips issuer marker characters and a trailing marker
+      without admitting a digit-leading candidate.
+- [x] `for` closes a merchant span only when an amount follows; descriptor text
+      such as `... FOR M` is preserved.
+- [x] Apostrophes do not abort merchant extraction.
+- [x] Existing merchant, balance/limit, direction, and dedupe regressions pass.
+- [x] Parser output version advances; no stored-field, UI, or permission change.
+
+### Test gate
+
+- [x] Synthetic marker-prefixed and descriptor cases added to the labelled
+      corpus and to focused parser tests.
+- [x] Shared JVM and Android unit tests pass.
+- [x] Android lint and debug assembly pass.
+- [x] Shared-only change; connected testing is not required.
+
+### Deferred
+
+Issuer templates, UPI VPA merchant shapes, other descriptor words (`from`,
+`was`, `current`), and LLM-based extraction remain outside this slice.
+
+## ENH-06 — Period re-parse from settings
+
+**Status:** Complete
+
+User-assigned follow-up so parser upgrades can refresh already imported rows:
+Settings now offers a re-parse action over an explicitly chosen period.
+
+### Acceptance criteria
+
+- [x] A new `REPARSE` import mode re-reads a bounded period from the SMS
+      provider; its start is clamped to the import policy window.
+- [x] Settings offers four calendar presets (current month, last month onwards,
+      current week, last week onwards), each previewing its resolved range and
+      clamped to the import policy window.
+- [x] Re-parsing refreshes untouched rows, keeps user-edited rows frozen, never
+      duplicates, and does not raise transaction alerts.
+- [x] The action is hidden in demo mode and disabled while scanning or deleting.
+
+### Test gate
+
+- [x] Shared coordinator tests cover re-parse bounds, policy clamping, and
+      idempotent refresh behavior.
+- [x] ViewModel unit tests cover window display, clamping, cancellation, and
+      impossible-window handling.
+- [x] Connected Compose tests drive settings → dialog → preset → cancel and the
+      full suite passes on the `SpendTracker_API_37` emulator.
+- [x] Shared JVM and Android unit tests, Android lint, and debug assembly pass.
+- [x] Manual emulator run: four synthetic HDFC-shaped messages imported, the
+      dialog rendered with calendar and presets, and a 30-day re-parse completed.
+
+### Deferred
+
+Pruning rows whose source no longer parses, and a parser-version change notice,
+remain outside this slice.
 
 MVP-03 and MVP-04 may proceed in parallel only if separate owners avoid the same
 import contracts and coordinate schema/parser changes. By default, take slices

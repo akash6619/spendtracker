@@ -49,6 +49,14 @@ object UiTestTags {
     const val EXPLORE_DEMO = "explore_demo"
     const val LEAVE_DEMO = "leave_demo"
     const val OPEN_SETTINGS = "open_settings"
+    const val REPARSE_ROW = "reparse_row"
+    const val REPARSE_DIALOG = "reparse_dialog"
+    const val REPARSE_CONFIRM = "reparse_confirm"
+    const val REPARSE_CANCEL = "reparse_cancel"
+    const val REPARSE_PERIOD_CURRENT_MONTH = "reparse_period_current_month"
+    const val REPARSE_PERIOD_LAST_MONTH = "reparse_period_last_month"
+    const val REPARSE_PERIOD_CURRENT_WEEK = "reparse_period_current_week"
+    const val REPARSE_PERIOD_LAST_WEEK = "reparse_period_last_week"
 }
 
 @Composable
@@ -95,6 +103,9 @@ fun SpendTrackerApp(
             onCancelDeleteAll = viewModel::onCancelDeleteAll,
             onConfirmDeleteAll = viewModel::onConfirmDeleteAll,
             onDeleteAllNoticeShown = viewModel::onDeleteAllNoticeShown,
+            onRequestReparse = viewModel::onRequestReparse,
+            onCancelReparse = viewModel::onCancelReparse,
+            onConfirmReparse = viewModel::onConfirmReparse,
         ),
     )
 }
